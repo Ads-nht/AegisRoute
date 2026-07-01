@@ -175,10 +175,9 @@ function initMapInstance() {
             position: 'bottomright'
         }).addTo(map);
 
-        // CartoDB Voyager tiles
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
+        // Google Maps Roadmap tiles
+        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            attribution: '&copy; Google Maps',
             maxZoom: 20
         }).addTo(map);
     } else {
