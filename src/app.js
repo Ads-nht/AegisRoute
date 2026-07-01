@@ -66,6 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 itinerary: []
             });
+        })
+        .finally(() => {
+            registerControls();
         });
 });
 
@@ -371,6 +374,29 @@ function renderTimeline() {
         
         container.appendChild(card);
     });
+
+    // Add special "Add Stop Card" at the end of the timeline list
+    const addCard = document.createElement('div');
+    addCard.className = 'timeline-card add-stop-card';
+    addCard.innerHTML = `
+        <div class="card-icon-wrapper">
+            <span><i class="fa-solid fa-plus"></i></span>
+        </div>
+        <div class="card-body">
+            <h3>Yeni Durak Ekle</h3>
+            <p>Rotanıza yeni bir durak veya harita checkpoint'i eklemek için tıklayın.</p>
+        </div>
+    `;
+    addCard.addEventListener('click', () => {
+        const modal = document.getElementById('route-editor-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            const currentData = { config: appConfig, itinerary: itinerary };
+            const jsonInput = document.getElementById('json-input');
+            if (jsonInput) jsonInput.value = JSON.stringify(currentData, null, 2);
+        }
+    });
+    container.appendChild(addCard);
 }
 
 // 9. Centralized Stop Selection Logic
