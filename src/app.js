@@ -196,7 +196,7 @@ function handleMapClick(e) {
 
     // Auto-fill form fields
     const latInput = document.getElementById('stop-lat');
-    const lonInput = document.getElementById('stop-lng');
+    const lonInput = document.getElementById('stop-lon');
     if (latInput && lonInput) {
         latInput.value = e.latlng.lat.toFixed(6);
         lonInput.value = e.latlng.lng.toFixed(6);
