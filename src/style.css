@@ -1507,4 +1507,19 @@ body {
     transition: margin 0.2s ease, border-top 0.1s ease;
 }
 
+/* Sync Button Styling */
+.edit-route-btn.sync-btn {
+    background: rgba(42, 157, 143, 0.15);
+    border: 1px solid rgba(42, 157, 143, 0.3);
+    color: var(--primary-teal);
+    margin-top: 8px;
+}
+
+.edit-route-btn.sync-btn:hover {
+    background: var(--primary-teal);
+    color: var(--bg-dark);
+    box-shadow: 0 0 12px rgba(42, 157, 143, 0.4);
+    transform: translateY(-2px);
+}
+
 

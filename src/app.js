@@ -903,4 +903,67 @@ function registerControls() {
             }, 100);
         });
     }
+
+    // Google Maps Sync Button Event Listener
+    const syncRouteBtn = document.getElementById('btn-sync-route');
+    if (syncRouteBtn) {
+        syncRouteBtn.addEventListener('click', () => {
+            syncRouteWithAI();
+        });
+    }
+}
+
+// Synchronize Route coordinates and details using AI Routing Engine
+function syncRouteWithAI() {
+    const syncBtn = document.getElementById('btn-sync-route');
+    if (!syncBtn) return;
+
+    // Visual loading state
+    const originalHtml = syncBtn.innerHTML;
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '<i class="fa-solid fa-arrows-spin fa-spin"></i> Google Haritalarla Sync Ediliyor...';
+
+    const currentData = { itinerary: itinerary };
+
+    fetch('/api/route-sync', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(currentData)
+    })
+    .then(res => {
+        if (!res.ok) {
+            return res.json().then(data => { throw new Error(data.error || "Sunucu hatası."); });
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data.legs && Array.isArray(data.legs)) {
+            data.legs.forEach(leg => {
+                const stopIndex = itinerary.findIndex(item => item.id === leg.from_id);
+                if (stopIndex !== -1 && itinerary[stopIndex]) {
+                    const stop = itinerary[stopIndex];
+                    stop.path_to_next = leg.path || [];
+                    
+                    // Add AI route info to description without duplicate appends
+                    const cleanedDesc = stop.desc.split('\n\n📍 AI Rota Bilgisi:')[0];
+                    stop.desc = `${cleanedDesc}\n\n📍 AI Rota Bilgisi: ${leg.details} (Süre: ${leg.duration})`;
+                }
+            });
+            
+            rebuildRouteUI();
+            alert("Harita yolları ve toplu taşıma süreleri başarıyla senkronize edildi!");
+        } else {
+            throw new Error("Geçersiz yanıt formatı.");
+        }
+    })
+    .catch(err => {
+        console.error("AI Sync Error:", err);
+        alert("Senkronizasyon Başarısız: " + err.message);
+    })
+    .finally(() => {
+        syncBtn.disabled = false;
+        syncBtn.innerHTML = originalHtml;
+    });
 }
