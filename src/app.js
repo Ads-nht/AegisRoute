@@ -194,12 +194,25 @@ function handleMapClick(e) {
     const modal = document.getElementById('route-editor-modal');
     if (!modal || modal.style.display !== 'flex') return;
 
-    // Auto-fill form fields
+    // Only pick if modal is in map-picking mode
+    if (!modal.classList.contains('map-picking')) return;
+
+    // Auto-fill hidden form fields
     const latInput = document.getElementById('stop-lat');
     const lonInput = document.getElementById('stop-lon');
     if (latInput && lonInput) {
         latInput.value = e.latlng.lat.toFixed(6);
         lonInput.value = e.latlng.lng.toFixed(6);
+    }
+
+    // Update coordinates text preview elements
+    const previewLat = document.getElementById('preview-lat');
+    const previewLon = document.getElementById('preview-lon');
+    const coordsPreview = document.getElementById('coords-preview');
+    if (previewLat && previewLon && coordsPreview) {
+        previewLat.innerText = e.latlng.lat.toFixed(5);
+        previewLon.innerText = e.latlng.lng.toFixed(5);
+        coordsPreview.style.display = 'flex';
     }
 
     // Place stabbing pin marker
@@ -215,6 +228,9 @@ function handleMapClick(e) {
     });
 
     tempMarker = L.marker(e.latlng, { icon: stabIcon }).addTo(map);
+
+    // Turn off map-picking view to restore the full modal
+    modal.classList.remove('map-picking');
 }
 
 // 3. Draw Markers with custom CSS classes & emojis
@@ -609,10 +625,29 @@ function registerControls() {
     if (openBtn && modal) {
         openBtn.addEventListener('click', () => {
             modal.style.display = 'flex';
+            modal.classList.remove('map-picking');
             // Pre-fill JSON area with current config + itinerary
             const currentData = { config: appConfig, itinerary: itinerary };
             const jsonInput = document.getElementById('json-input');
             if (jsonInput) jsonInput.value = JSON.stringify(currentData, null, 2);
+        });
+    }
+
+    // Map Picking Button Triggers
+    const pickOnMapBtn = document.getElementById('btn-pick-on-map');
+    const cancelPickBtn = document.getElementById('btn-cancel-pick');
+
+    if (pickOnMapBtn && modal) {
+        pickOnMapBtn.addEventListener('click', () => {
+            modal.classList.add('map-picking');
+        });
+    }
+
+    if (cancelPickBtn && modal) {
+        cancelPickBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            modal.classList.remove('map-picking');
+            clearTempMarker();
         });
     }
 
@@ -678,6 +713,8 @@ function registerControls() {
             rebuildRouteUI();
             addForm.reset();
             clearTempMarker();
+            const coordsPreview = document.getElementById('coords-preview');
+            if (coordsPreview) coordsPreview.style.display = 'none';
             
             // Switch view to show the newly added stop
             selectItineraryItem(newStop.id, true);

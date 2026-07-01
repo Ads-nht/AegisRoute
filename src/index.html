@@ -126,6 +126,12 @@
     <!-- Edit Route Modal -->
     <div id="route-editor-modal" class="modal-backdrop" style="display: none;">
         <div class="modal-card">
+            <!-- Floating picking instruction banner -->
+            <div class="picking-banner">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span>Harita üzerinde durak yerini seçin...</span>
+                <button type="button" class="picking-cancel-btn" id="btn-cancel-pick">İptal</button>
+            </div>
             <div class="modal-header">
                 <h2><i class="fa-solid fa-map-location-dot"></i> Rota Editörü & JSON Yükleyici</h2>
                 <button class="close-modal-btn" id="btn-close-editor"><i class="fa-solid fa-xmark"></i></button>
@@ -161,12 +167,15 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="stop-lat">Enlem (Latitude)</label>
-                                <input type="number" step="any" id="stop-lat" placeholder="Örn: 41.0256" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="stop-lon">Boylam (Longitude)</label>
-                                <input type="number" step="any" id="stop-lon" placeholder="Örn: 28.9742" required>
+                                <label>Durak Koordinatları</label>
+                                <button type="button" id="btn-pick-on-map" class="map-pick-btn">
+                                    <i class="fa-solid fa-map-pin"></i> Haritadan Konum Seç
+                                </button>
+                                <div class="coordinates-preview" id="coords-preview" style="display: none;">
+                                    <span>Seçilen Konum: Enlem: <strong id="preview-lat">-</strong>, Boylam: <strong id="preview-lon">-</strong></span>
+                                </div>
+                                <input type="hidden" id="stop-lat" required>
+                                <input type="hidden" id="stop-lon" required>
                             </div>
                         </div>
                         <div class="form-row">

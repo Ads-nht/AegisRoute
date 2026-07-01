@@ -1248,4 +1248,134 @@ body {
     }
 }
 
+/* ==============================================================================
+   Map Picking State for Modal & Layout Elements
+   ============================================================================== */
+.modal-backdrop.map-picking {
+    background: transparent;
+    backdrop-filter: none;
+    pointer-events: none; /* Allows clicks to pass through to the Leaflet map */
+}
+
+.modal-backdrop.map-picking .modal-card {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(0) !important;
+    width: auto;
+    max-width: 90%;
+    background: rgba(30, 30, 42, 0.95);
+    border: 1.5px solid var(--primary-teal);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border-radius: 40px; /* capsule style */
+    padding: 8px 16px;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    pointer-events: auto; /* enables clicks on the card itself */
+    animation: slideDownPick 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDownPick {
+    from { transform: translateX(-50%) translateY(-60px); opacity: 0; }
+    to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+/* Hide header, body, and footer content during map picking */
+.modal-backdrop.map-picking .modal-header,
+.modal-backdrop.map-picking .modal-body,
+.modal-backdrop.map-picking .modal-footer {
+    display: none !important;
+}
+
+/* Picking Banner */
+.picking-banner {
+    display: none;
+    align-items: center;
+    gap: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+.modal-backdrop.map-picking .picking-banner {
+    display: flex;
+}
+
+.picking-banner i {
+    color: var(--primary-teal);
+    font-size: 18px;
+    animation: mapPinBounce 1s infinite alternate;
+}
+
+@keyframes mapPinBounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-4px); }
+}
+
+.picking-cancel-btn {
+    background: rgba(231, 111, 81, 0.15);
+    border: 1px solid rgba(231, 111, 81, 0.3);
+    border-radius: 20px;
+    padding: 6px 14px;
+    color: var(--accent-rose);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.picking-cancel-btn:hover {
+    background: var(--accent-rose);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(231, 111, 81, 0.4);
+}
+
+/* Coordinate Selector Buttons & Previews */
+.map-pick-btn {
+    background: rgba(42, 157, 143, 0.1);
+    border: 1.5px dashed rgba(42, 157, 143, 0.4);
+    border-radius: 8px;
+    padding: 12px;
+    color: var(--primary-teal);
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: var(--transition-smooth);
+    width: 100%;
+}
+
+.map-pick-btn:hover {
+    background: var(--primary-teal);
+    color: var(--text-light);
+    border-style: solid;
+    box-shadow: 0 0 12px rgba(42, 157, 143, 0.25);
+    transform: translateY(-1px);
+}
+
+.coordinates-preview {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.coordinates-preview strong {
+    color: var(--highlight-gold);
+    font-weight: 600;
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
 
