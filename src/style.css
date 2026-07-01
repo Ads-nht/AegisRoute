@@ -736,50 +736,156 @@ body {
 @media (max-width: 768px) {
     .app-container {
         flex-direction: column;
+        height: 100vh;
+        width: 100vw;
+        position: relative;
+        overflow: hidden;
     }
     
     .sidebar {
+        display: contents; /* Flattens sidebar into app-container grid/flex */
+    }
+    
+    .app-header {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
-        height: 100%;
-        border-right: none;
+        z-index: 1005;
+        background: rgba(17, 18, 33, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 10px 16px;
+        box-sizing: border-box;
     }
     
+    .app-header p.subtitle,
+    .app-header .stats-glass,
+    .app-header .edit-route-btn {
+        display: none !important; /* Hide extra info in header on mobile to maximize map viewport */
+    }
+    
+    .logo-area h1 {
+        font-size: 18px;
+    }
+    
+    .logo-area span i {
+        font-size: 16px;
+    }
+
     .mobile-toggle-container {
-        display: flex;
-    }
-    
-    /* When Map is selected */
-    .app-container.show-map .sidebar {
-        height: auto;
-    }
-    .app-container.show-map #timeline-container,
-    .app-container.show-map .sidebar-footer {
-        display: none;
-    }
-    
-    /* When Timeline is selected */
-    .app-container.show-timeline .map-section {
-        display: none;
+        display: none !important; /* Hide map/list toggler as they are unified */
     }
     
     .map-section {
         width: 100%;
         height: 100%;
-        flex: 1;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
     }
     
-    /* Floating stop card behavior on mobile */
-    .floating-stop-card {
-        display: block; /* always keep layout space ready or active */
-        left: 16px;
-        right: 16px;
+    #map {
+        width: 100%;
+        height: 100%;
+    }
+    
+    #timeline-container {
+        position: absolute;
         bottom: 16px;
-        max-width: none;
+        left: 0;
+        width: 100%;
+        z-index: 1001;
+        display: flex !important;
+        flex-direction: row;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: 12px;
+        padding: 8px 16px 16px 16px;
+        box-sizing: border-box;
+        height: auto;
+        pointer-events: auto;
+    }
+    
+    /* Hide horizontal scrollbar for clean swipe experience */
+    #timeline-container::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .timeline-card {
+        flex: 0 0 82%; /* Each card takes 82% of mobile width */
+        scroll-snap-align: center;
+        background: rgba(30, 30, 42, 0.85) !important;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 14px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        margin-bottom: 0 !important;
+        padding: 14px;
+        box-sizing: border-box;
+        height: 110px; /* fixed height for slider uniformity */
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: border-color 0.3s ease;
+    }
+    
+    .timeline-card.active {
+        border-color: var(--primary-teal) !important;
+        box-shadow: 0 0 15px rgba(42, 157, 143, 0.3);
+    }
+    
+    .card-icon-wrapper {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+    
+    .timeline-card .card-body {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        flex: 1;
+        overflow: hidden;
+    }
+    
+    .timeline-card .card-body h3 {
+        font-size: 14px;
+        margin: 0 0 4px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .timeline-card .card-body p {
+        font-size: 11px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.3;
+        margin: 0;
+    }
+    
+    .card-header-info,
+    .card-actions {
+        display: none !important; /* Hide directions in slider for minimalism */
+    }
+    
+    .sidebar-footer {
+        display: none !important;
+    }
+    
+    .floating-stop-card {
+        display: none !important; /* Remove static floating stop card since we have dynamic slider */
     }
     
     .map-overlay-controls {
-        top: 16px;
-        right: 16px;
+        top: 60px; /* Push down to clear mobile header */
+        right: 12px;
     }
 }
 

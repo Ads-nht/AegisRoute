@@ -447,7 +447,7 @@ function renderTimeline() {
 }
 
 // 9. Centralized Stop Selection Logic
-function selectItineraryItem(id, zoomMap = true) {
+function selectItineraryItem(id, zoomMap = true, programmaticScroll = true) {
     const selectedItem = itinerary.find(item => item.id === id);
     if (!selectedItem) return;
 
@@ -470,12 +470,27 @@ function selectItineraryItem(id, zoomMap = true) {
         }
     }
 
-    // A. Visual highlights in DOM (Timeline Sidebar)
+    // A. Visual highlights in DOM (Timeline Sidebar / Mobile Carousel)
     document.querySelectorAll('.timeline-card').forEach(card => card.classList.remove('active'));
     const activeCard = document.getElementById(`card-${id}`);
     if (activeCard) {
         activeCard.classList.add('active');
-        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (window.innerWidth <= 768) {
+            if (programmaticScroll) {
+                const container = document.getElementById('timeline-container');
+                if (container) {
+                    const cardOffset = activeCard.offsetLeft - container.offsetLeft;
+                    const containerHalfWidth = container.offsetWidth / 2;
+                    const cardHalfWidth = activeCard.offsetWidth / 2;
+                    container.scrollTo({
+                        left: cardOffset - containerHalfWidth + cardHalfWidth,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        } else {
+            activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }
 
     // B. Visual highlights in Leaflet Map Markers
@@ -795,6 +810,46 @@ function registerControls() {
                 if (jsonInput) jsonInput.value = "";
                 modal.style.display = 'none';
             }
+        });
+    }
+
+    // Dynamic swipe/scroll listener for mobile carousel cards
+    let scrollTimeout;
+    const timelineContainer = document.getElementById('timeline-container');
+    if (timelineContainer) {
+        timelineContainer.addEventListener('scroll', () => {
+            if (window.innerWidth > 768) return; // Only trigger horizontal carousel selection on mobile
+            
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                const cards = timelineContainer.querySelectorAll('.timeline-card');
+                if (cards.length === 0) return;
+                
+                const containerCenter = timelineContainer.scrollLeft + (timelineContainer.offsetWidth / 2);
+                let closestCard = null;
+                let minDistance = Infinity;
+                
+                cards.forEach(card => {
+                    // Ignore the 'Add Stop' card for centering selection
+                    if (card.classList.contains('add-stop-card')) return;
+                    
+                    const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+                    const distance = Math.abs(containerCenter - cardCenter);
+                    
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestCard = card;
+                    }
+                });
+                
+                if (closestCard) {
+                    const id = parseInt(closestCard.id.replace('card-', ''));
+                    if (!isNaN(id)) {
+                        // Select stops and center map, disable programmatic carousel scroll to avoid bounce loops
+                        selectItineraryItem(id, true, false);
+                    }
+                }
+            }, 100);
         });
     }
 }
