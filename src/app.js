@@ -19,6 +19,7 @@ let activeLayers = {
 };
 let mapEnabled = typeof L !== 'undefined';
 let countdownInterval;
+let tempMarker = null;
 
 // 1. Fetch Route Configuration and Bootstrap
 document.addEventListener('DOMContentLoaded', () => {
@@ -180,9 +181,40 @@ function initMapInstance() {
             attribution: '&copy; Google Maps',
             maxZoom: 20
         }).addTo(map);
+
+        // Map Click Listener
+        map.on('click', handleMapClick);
     } else {
         map.setView(center, zoom);
     }
+}
+
+// Map Click Handler for Coordinate Selection
+function handleMapClick(e) {
+    const modal = document.getElementById('route-editor-modal');
+    if (!modal || modal.style.display !== 'flex') return;
+
+    // Auto-fill form fields
+    const latInput = document.getElementById('stop-lat');
+    const lonInput = document.getElementById('stop-lng');
+    if (latInput && lonInput) {
+        latInput.value = e.latlng.lat.toFixed(6);
+        lonInput.value = e.latlng.lng.toFixed(6);
+    }
+
+    // Place stabbing pin marker
+    if (tempMarker && map) {
+        map.removeLayer(tempMarker);
+    }
+
+    const stabIcon = L.divIcon({
+        className: 'temp-stab-marker',
+        html: '<div class="stab-pin"><i class="fa-solid fa-thumbtack"></i></div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32]
+    });
+
+    tempMarker = L.marker(e.latlng, { icon: stabIcon }).addTo(map);
 }
 
 // 3. Draw Markers with custom CSS classes & emojis
@@ -565,6 +597,14 @@ function registerControls() {
     const fileUploadInput = document.getElementById('file-upload');
     const triggerUploadBtn = document.getElementById('btn-trigger-upload');
 
+    // Helper to clear temporary pin
+    function clearTempMarker() {
+        if (tempMarker && map) {
+            map.removeLayer(tempMarker);
+            tempMarker = null;
+        }
+    }
+
     // Open/Close Modal
     if (openBtn && modal) {
         openBtn.addEventListener('click', () => {
@@ -579,13 +619,17 @@ function registerControls() {
     if (closeBtn && modal) {
         closeBtn.addEventListener('click', () => {
             modal.style.display = 'none';
+            clearTempMarker();
         });
     }
 
     // Modal click backdrop close
     if (modal) {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.style.display = 'none';
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                clearTempMarker();
+            }
         });
     }
 
@@ -633,6 +677,7 @@ function registerControls() {
             itinerary.push(newStop);
             rebuildRouteUI();
             addForm.reset();
+            clearTempMarker();
             
             // Switch view to show the newly added stop
             selectItineraryItem(newStop.id, true);
