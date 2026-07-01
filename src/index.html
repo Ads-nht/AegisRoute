@@ -61,6 +61,9 @@
                         </div>
                     </div>
                 </div>
+                <button class="edit-route-btn" id="btn-open-editor">
+                    <i class="fa-solid fa-pen-to-square"></i> Rotayı Düzenle / JSON Yükle
+                </button>
             </header>
 
             <!-- Navigation Panel to Switch between Map and Timeline on Mobile -->
@@ -118,6 +121,98 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Edit Route Modal -->
+    <div id="route-editor-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-map-location-dot"></i> Rota Editörü & JSON Yükleyici</h2>
+                <button class="close-modal-btn" id="btn-close-editor"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-tabs">
+                    <button class="modal-tab-btn active" id="tab-btn-form">Durak Ekle</button>
+                    <button class="modal-tab-btn" id="tab-btn-json">JSON Yapıştır / Yükle</button>
+                </div>
+                
+                <!-- Tab: Form Editor -->
+                <div id="tab-content-form" class="tab-content active">
+                    <form id="add-stop-form" class="editor-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="stop-title">Durak Adı</label>
+                                <input type="text" id="stop-title" placeholder="Örn: Galata Kulesi" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="stop-location">Mekan Detayı</label>
+                                <input type="text" id="stop-location" placeholder="Örn: Galata Meydanı" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="stop-time">Saat Aralığı</label>
+                                <input type="text" id="stop-time" placeholder="Örn: 14:00 - 15:00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="stop-emoji">Emoji</label>
+                                <input type="text" id="stop-emoji" placeholder="Örn: 🗼" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="stop-lat">Enlem (Latitude)</label>
+                                <input type="number" step="any" id="stop-lat" placeholder="Örn: 41.0256" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="stop-lon">Boylam (Longitude)</label>
+                                <input type="number" step="any" id="stop-lon" placeholder="Örn: 28.9742" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="stop-cost">Maliyet (TL)</label>
+                                <input type="number" id="stop-cost" value="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="stop-type">Durak Tipi</label>
+                                <select id="stop-type">
+                                    <option value="walk">Yürüyüş (Walk)</option>
+                                    <option value="sea">Deniz Yolu (Sea)</option>
+                                    <option value="metro">Metro</option>
+                                    <option value="drive">Araç (Drive)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="form-submit-btn"><i class="fa-solid fa-plus"></i> Rotaya Ekle</button>
+                    </form>
+                </div>
+                
+                <!-- Tab: JSON Paste -->
+                <div id="tab-content-json" class="tab-content">
+                    <p class="tab-help">Rotanızı JSON formatında yapıştırabilir veya bir <code>route.json</code> dosyası yükleyebilirsiniz.</p>
+                    <textarea id="json-input" placeholder="JSON rota şemasını buraya yapıştırın..."></textarea>
+                    <div class="json-actions">
+                        <input type="file" id="file-upload" accept=".json" style="display: none;">
+                        <button type="button" class="json-btn secondary-btn" id="btn-trigger-upload">
+                            <i class="fa-solid fa-file-arrow-up"></i> JSON Dosyası Seç
+                        </button>
+                        <button type="button" class="json-btn" id="btn-apply-json">
+                            <i class="fa-solid fa-circle-check"></i> Rotaları Uygula
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="modal-action-btn" id="btn-export-json">
+                    <i class="fa-solid fa-file-arrow-down"></i> Rotayı İndir (route.json)
+                </button>
+                <button type="button" class="modal-action-btn danger-btn" id="btn-clear-route">
+                    <i class="fa-solid fa-trash-can"></i> Tümünü Sil
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Leaflet JS -->

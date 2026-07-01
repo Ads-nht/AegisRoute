@@ -18,6 +18,7 @@ let activeLayers = {
     drive: true
 };
 let mapEnabled = typeof L !== 'undefined';
+let countdownInterval;
 
 // 1. Fetch Route Configuration and Bootstrap
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,59 +28,123 @@ document.addEventListener('DOMContentLoaded', () => {
         if (appContainer) appContainer.classList.add('show-timeline');
     }
 
+    // Try loading route.json. If it fails, fall back to route_template.json.
     fetch('route.json')
         .then(response => {
             if (!response.ok) {
-                throw new Error("HTTP error " + response.status);
+                throw new Error("route.json not found, loading template...");
             }
             return response.json();
         })
+        .catch(() => {
+            // Fallback to route_template.json
+            return fetch('route_template.json')
+                .then(res => res.json());
+        })
         .then(data => {
-            appConfig = data.config || {};
-            itinerary = data.itinerary || [];
-            
-            // Apply configuration dynamically to HTML elements
-            document.title = appConfig.title || "AegisRoute";
-            
-            const titleEl = document.querySelector('.logo-area h1');
-            if (titleEl) titleEl.innerText = appConfig.title || "AegisRoute";
-            
-            const subtitleEl = document.querySelector('.subtitle');
-            if (subtitleEl) subtitleEl.innerText = appConfig.subtitle || "Custom Route Planner";
-            
-            const labelEl = document.querySelector('.stat-label');
-            if (labelEl) labelEl.innerText = appConfig.countdown_label || "Hedef Sayaç";
-            
-            const targetEl = document.querySelector('.stat-value.highlight');
-            if (targetEl) targetEl.innerText = appConfig.countdown_target || "00:00";
-            
-            const footerEl = document.querySelector('.sidebar-footer p');
-            if (footerEl) footerEl.innerHTML = appConfig.footer_text || "Designed for custom route planning. ❤️";
-
-            // Initialize app modules
-            renderTimeline();
-            initMap();
-            startSunsetCountdown();
-            calculateTotalBudget();
-            registerControls();
-
-            // Select the first stop by default as active after map loads
-            setTimeout(() => {
-                selectItineraryItem(1, false);
-            }, 500);
+            loadRouteData(data);
         })
         .catch(err => {
-            console.error("Failed to load route.json:", err);
+            console.error("Failed to load both route.json and route_template.json:", err);
             const warning = document.getElementById('offline-warning-banner');
             if (warning) {
-                warning.querySelector('span').innerText = "Rota verileri (route.json) yüklenemedi. Sunucu bağlantınızı kontrol edin.";
+                warning.querySelector('span').innerText = "Rota verileri yüklenemedi. Rota editörünü kullanarak yeni bir rota oluşturabilirsiniz.";
                 warning.style.display = 'flex';
             }
+            // Initialize empty app modules
+            loadRouteData({
+                config: {
+                    title: "AegisRoute",
+                    subtitle: "İnteraktif Rota Planlayıcı",
+                    map_center: [41.0240, 28.9950],
+                    map_zoom: 13,
+                    countdown_label: "Hedef Zaman",
+                    countdown_target: "20:00",
+                    countdown_hour: 20,
+                    countdown_minute: 0,
+                    footer_text: "AegisRoute ile kendi rotanızı planlayın."
+                },
+                itinerary: []
+            });
         });
 });
 
-// 2. Initialize Leaflet Map
-function initMap() {
+// Load and apply route configuration and list
+function loadRouteData(data) {
+    appConfig = data.config || {};
+    itinerary = data.itinerary || [];
+    
+    // Apply configuration dynamically to HTML elements
+    document.title = appConfig.title || "AegisRoute";
+    
+    const titleEl = document.querySelector('.logo-area h1');
+    if (titleEl) titleEl.innerText = appConfig.title || "AegisRoute";
+    
+    const subtitleEl = document.querySelector('.subtitle');
+    if (subtitleEl) subtitleEl.innerText = appConfig.subtitle || "Custom Route Planner";
+    
+    const labelEl = document.querySelector('.stat-label');
+    if (labelEl) labelEl.innerText = appConfig.countdown_label || "Hedef Sayaç";
+    
+    const targetEl = document.querySelector('.stat-value.highlight');
+    if (targetEl) targetEl.innerText = appConfig.countdown_target || "00:00";
+    
+    const footerEl = document.querySelector('.sidebar-footer p');
+    if (footerEl) footerEl.innerHTML = appConfig.footer_text || "Designed for custom route planning. ❤️";
+
+    // Setup JSON editor text area with current data
+    const jsonInput = document.getElementById('json-input');
+    if (jsonInput) {
+        jsonInput.value = JSON.stringify(data, null, 2);
+    }
+
+    // Refresh UI Components
+    rebuildRouteUI();
+    
+    // Select first stop if available
+    if (itinerary.length > 0) {
+        setTimeout(() => {
+            selectItineraryItem(itinerary[0].id, false);
+        }, 500);
+    }
+}
+
+// Clear map overlays and rebuild all visual routes
+function rebuildRouteUI() {
+    clearMapOverlays();
+    renderTimeline();
+    initMapInstance();
+    startSunsetCountdown();
+    calculateTotalBudget();
+    
+    if (mapEnabled) {
+        drawRouteMarkers();
+        drawRouteLines();
+        fitMapBounds();
+    }
+}
+
+// Clear Leaflet markers and lines
+function clearMapOverlays() {
+    if (!map) return;
+    
+    // Clear markers
+    for (let id in markers) {
+        map.removeLayer(markers[id]);
+    }
+    markers = {};
+
+    // Clear polylines
+    for (let type in polylines) {
+        polylines[type].forEach(line => {
+            map.removeLayer(line);
+        });
+        polylines[type] = [];
+    }
+}
+
+// 2. Initialize Leaflet Map Instance (Singletone-like check)
+function initMapInstance() {
     if (!mapEnabled) {
         console.warn("Leaflet is not loaded. Map features are disabled.");
         const warning = document.getElementById('offline-warning-banner');
@@ -97,35 +162,33 @@ function initMap() {
     const center = appConfig.map_center || [41.0240, 28.9950];
     const zoom = appConfig.map_zoom || 13;
 
-    map = L.map('map', {
-        zoomControl: false
-    }).setView(center, zoom);
-    
-    // Custom styled zoom control at bottom-right
-    L.control.zoom({
-        position: 'bottomright'
-    }).addTo(map);
+    if (!map) {
+        map = L.map('map', {
+            zoomControl: false
+        }).setView(center, zoom);
+        
+        // Custom styled zoom control at bottom-right
+        L.control.zoom({
+            position: 'bottomright'
+        }).addTo(map);
 
-    // CartoDB Voyager tiles (clean, beautiful, neutral colors)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
-    }).addTo(map);
-
-    // Place Markers and build Paths
-    drawRouteMarkers();
-    drawRouteLines();
-    fitMapBounds();
+        // CartoDB Voyager tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+    } else {
+        map.setView(center, zoom);
+    }
 }
 
 // 3. Draw Markers with custom CSS classes & emojis
 function drawRouteMarkers() {
-    if (!mapEnabled) return;
+    if (!mapEnabled || !map) return;
     itinerary.forEach(item => {
         const typeClass = `marker-${item.type}`;
         
-        // Custom Leaflet DivIcon
         const customIcon = L.divIcon({
             className: `custom-marker-container ${typeClass}`,
             html: `
@@ -138,10 +201,8 @@ function drawRouteMarkers() {
             popupAnchor: [0, -32]
         });
 
-        // Add Marker
         const marker = L.marker(item.coords, { icon: customIcon }).addTo(map);
         
-        // Build Custom HTML Popup
         const popupContent = `
             <div class="custom-popup-content">
                 <span class="popup-time">${item.time}</span>
@@ -151,19 +212,17 @@ function drawRouteMarkers() {
         `;
         marker.bindPopup(popupContent);
         
-        // Save marker instance
         markers[item.id] = marker;
 
-        // Click handler on marker
         marker.on('click', () => {
             selectItineraryItem(item.id, false);
         });
     });
 }
 
-// 4. Draw Polylines dynamically using route.json definitions
+// 4. Draw Polylines dynamically
 function drawRouteLines() {
-    if (!mapEnabled) return;
+    if (!mapEnabled || !map) return;
     
     const colors = {
         walk: '#2a9d8f',  // --walking-green
@@ -203,7 +262,7 @@ function drawRouteLines() {
 
 // 5. Fit Map view to include all route markers
 function fitMapBounds() {
-    if (!mapEnabled || itinerary.length === 0) return;
+    if (!mapEnabled || !map || itinerary.length === 0) return;
     const coordsList = itinerary.map(item => item.coords);
     const bounds = L.latLngBounds(coordsList);
     map.fitBounds(bounds, {
@@ -216,6 +275,8 @@ function fitMapBounds() {
 function startSunsetCountdown() {
     const timerElement = document.getElementById('countdown-timer');
     if (!timerElement) return;
+
+    if (countdownInterval) clearInterval(countdownInterval);
 
     const targetHour = appConfig.countdown_hour !== undefined ? appConfig.countdown_hour : 20;
     const targetMinute = appConfig.countdown_minute !== undefined ? appConfig.countdown_minute : 38;
@@ -248,7 +309,7 @@ function startSunsetCountdown() {
     }
     
     updateCountdown();
-    setInterval(updateCountdown, 1000);
+    countdownInterval = setInterval(updateCountdown, 1000);
 }
 
 // 7. Calculate and display budget total
@@ -263,6 +324,16 @@ function renderTimeline() {
     const container = document.getElementById('timeline-container');
     if (!container) return;
     container.innerHTML = '';
+    
+    if (itinerary.length === 0) {
+        container.innerHTML = `
+            <div class="empty-timeline-info" style="padding: 30px; text-align: center; color: var(--text-muted);">
+                <i class="fa-solid fa-map-pin" style="font-size: 28px; margin-bottom: 12px; display: block; color: var(--primary-teal);"></i>
+                <p>Henüz durak eklenmemiş. Rota Editörünü kullanarak hemen bir durak ekleyin!</p>
+            </div>
+        `;
+        return;
+    }
     
     itinerary.forEach(item => {
         const card = document.createElement('div');
@@ -335,7 +406,7 @@ function selectItineraryItem(id, zoomMap = true) {
     }
 
     // B. Visual highlights in Leaflet Map Markers
-    if (mapEnabled) {
+    if (mapEnabled && map) {
         document.querySelectorAll('.custom-marker-pin').forEach(pin => pin.classList.remove('active'));
         const activePin = document.getElementById(`marker-pin-${id}`);
         if (activePin) {
@@ -374,8 +445,9 @@ function selectItineraryItem(id, zoomMap = true) {
     }
 }
 
-// 10. Register Filters and Button Controls
+// 10. Register Filters, Button Controls and Modal Handlers
 function registerControls() {
+    // Recenter
     const recenterBtn = document.getElementById('recenter-map');
     if (recenterBtn) {
         recenterBtn.addEventListener('click', () => {
@@ -450,6 +522,172 @@ function registerControls() {
             setTimeout(() => {
                 map.invalidateSize();
             }, 100);
+        });
+    }
+
+    // --- ROTA EDİTÖRÜ MODAL ETKİLEŞİMLERİ ---
+    const modal = document.getElementById('route-editor-modal');
+    const openBtn = document.getElementById('btn-open-editor');
+    const closeBtn = document.getElementById('btn-close-editor');
+    const tabFormBtn = document.getElementById('tab-btn-form');
+    const tabJsonBtn = document.getElementById('tab-btn-json');
+    const tabFormContent = document.getElementById('tab-content-form');
+    const tabJsonContent = document.getElementById('tab-content-json');
+    const addForm = document.getElementById('add-stop-form');
+    const applyJsonBtn = document.getElementById('btn-apply-json');
+    const exportJsonBtn = document.getElementById('btn-export-json');
+    const clearRouteBtn = document.getElementById('btn-clear-route');
+    const fileUploadInput = document.getElementById('file-upload');
+    const triggerUploadBtn = document.getElementById('btn-trigger-upload');
+
+    // Open/Close Modal
+    if (openBtn && modal) {
+        openBtn.addEventListener('click', () => {
+            modal.style.display = 'flex';
+            // Pre-fill JSON area with current config + itinerary
+            const currentData = { config: appConfig, itinerary: itinerary };
+            const jsonInput = document.getElementById('json-input');
+            if (jsonInput) jsonInput.value = JSON.stringify(currentData, null, 2);
+        });
+    }
+
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    // Modal click backdrop close
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        });
+    }
+
+    // Tab Switching
+    if (tabFormBtn && tabJsonBtn && tabFormContent && tabJsonContent) {
+        tabFormBtn.addEventListener('click', () => {
+            tabFormBtn.classList.add('active');
+            tabJsonBtn.classList.remove('active');
+            tabFormContent.classList.add('active');
+            tabJsonContent.classList.remove('active');
+        });
+
+        tabJsonBtn.addEventListener('click', () => {
+            tabJsonBtn.classList.add('active');
+            tabFormBtn.classList.remove('active');
+            tabJsonContent.classList.add('active');
+            tabFormContent.classList.remove('active');
+        });
+    }
+
+    // Submit stop via form
+    if (addForm) {
+        addForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const nextId = itinerary.length > 0 ? Math.max(...itinerary.map(item => item.id)) + 1 : 1;
+            const newStop = {
+                id: nextId,
+                time: document.getElementById('stop-time').value,
+                title: document.getElementById('stop-title').value,
+                locationName: document.getElementById('stop-location').value,
+                desc: document.getElementById('stop-title').value + " durağında durulacak.",
+                cost: parseFloat(document.getElementById('stop-cost').value) || 0,
+                costLabel: (parseFloat(document.getElementById('stop-cost').value) || 0) + " TL",
+                emoji: document.getElementById('stop-emoji').value || "📍",
+                type: document.getElementById('stop-type').value,
+                coords: [
+                    parseFloat(document.getElementById('stop-lat').value),
+                    parseFloat(document.getElementById('stop-lon').value)
+                ],
+                type_to_next: "walk",
+                path_to_next: []
+            };
+
+            itinerary.push(newStop);
+            rebuildRouteUI();
+            addForm.reset();
+            
+            // Switch view to show the newly added stop
+            selectItineraryItem(newStop.id, true);
+            alert("Durak başarıyla eklendi!");
+        });
+    }
+
+    // Apply custom pasted JSON
+    if (applyJsonBtn) {
+        applyJsonBtn.addEventListener('click', () => {
+            const jsonText = document.getElementById('json-input').value;
+            try {
+                const parsed = JSON.parse(jsonText);
+                if (!parsed.itinerary || !Array.isArray(parsed.itinerary)) {
+                    throw new Error("Geçersiz şema: 'itinerary' dizisi bulunamadı.");
+                }
+                loadRouteData(parsed);
+                modal.style.display = 'none';
+                alert("Rota JSON şeması başarıyla uygulandı!");
+            } catch (err) {
+                alert("JSON ayrıştırma hatası: " + err.message);
+            }
+        });
+    }
+
+    // Trigger local file upload
+    if (triggerUploadBtn && fileUploadInput) {
+        triggerUploadBtn.addEventListener('click', () => {
+            fileUploadInput.click();
+        });
+    }
+
+    if (fileUploadInput) {
+        fileUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const parsed = JSON.parse(event.target.result);
+                    loadRouteData(parsed);
+                    modal.style.display = 'none';
+                    alert("Dosya başarıyla yüklendi ve uygulandı!");
+                } catch (err) {
+                    alert("JSON Dosyası okuma hatası: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    // Export/Download JSON file
+    if (exportJsonBtn) {
+        exportJsonBtn.addEventListener('click', () => {
+            const currentData = { config: appConfig, itinerary: itinerary };
+            const jsonString = JSON.stringify(currentData, null, 2);
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = "route.json";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    // Clear all route checkpoints
+    if (clearRouteBtn) {
+        clearRouteBtn.addEventListener('click', () => {
+            if (confirm("Tüm rotayı ve durakları silmek istediğinize emin misiniz?")) {
+                itinerary = [];
+                rebuildRouteUI();
+                const jsonInput = document.getElementById('json-input');
+                if (jsonInput) jsonInput.value = "";
+                modal.style.display = 'none';
+            }
         });
     }
 }

@@ -14,3 +14,8 @@ __pycache__/
 .vscode/
 *.swp
 *.swo
+
+# Project dynamic data (Ignored to protect personal routes)
+route.json
+src/route.json
+src/route_default.json

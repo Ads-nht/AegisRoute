@@ -19,9 +19,19 @@ AegisRoute; gezi, seyahat veya etkinlik rotalarınızı interaktif bir harita ü
 
 ## 🏗️ Kendi Rotanızı Nasıl Tanımlarsınız?
 
-AegisRoute veri odaklıdır. `src/` dizini altındaki [route.json](src/route.json) dosyasını düzenlemeniz yeterlidir.
+AegisRoute veri odaklıdır. Başlangıçta `route.json` dosyasını yüklemeye çalışır. Eğer `route.json` bulunamazsa (güvenlik nedeniyle git'e yüklenmediği için GitHub'da varsayılan olarak yoktur), uygulama **otomatik olarak** `route_template.json` dosyasını yükler.
 
-### Yapılandırma Şeması (`route.json`):
+### 🛠️ İnteraktif Rota Editörü (UI)
+Rotalarınızı doğrudan web tarayıcısı üzerinden **Rota Editörü & JSON Yükleyici** panelini kullanarak yapılandırabilir ve düzenleyebilirsiniz:
+1. Yan menüdeki **"Rotayı Düzenle / JSON Yükle"** butonuna tıklayın.
+2. **"Durak Ekle"** sekmesinde; durak adlarını, koordinatları (enlem/boylam), maliyeti, emojileri ve ulaşım tiplerini girerek durağı anında haritaya ekleyin. Yollar otomatik olarak yeniden çizilecektir.
+3. **"JSON Yapıştır / Yükle"** sekmesinde; hazır bir JSON rota şemasını yapıştırabilir veya bilgisayarınızdaki bir `.json` dosyasını seçip uygulayabilirsiniz.
+4. **"Rotayı İndir (route.json)"** butonuna tıklayarak oluşturduğunuz rotayı bilgisayarınıza indirin. Bu dosyayı projenin `src/` dizinine yerleştirerek sonraki seferlerde otomatik yüklenmesini sağlayın.
+
+> [!IMPORTANT]
+> **Git Koruması:** `route.json` dosyası, kişisel seyahat rotalarınızın yanlışlıkla GitHub'a commit edilmesini engellemek için `.gitignore` içine eklenmiştir. Özel rotalarınızı yerelinizde saklayabilir veya arayüz üzerinden indirip yükleyebilirsiniz.
+
+### Yapılandırma Şeması (`route_template.json` / `route.json`):
 ```json
 {
   "config": {

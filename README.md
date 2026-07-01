@@ -19,9 +19,19 @@ AegisRoute is a modern, high-performance, single-page web application designed t
 
 ## 🏗️ How to Configure Your Custom Route
 
-AegisRoute is fully data-driven. Simply edit the [route.json](src/route.json) file in the `src/` directory.
+AegisRoute is fully data-driven. It attempts to load `route.json` on startup. If `route.json` is not found (which is default on GitHub as it is ignored for security), the application **automatically falls back** to load `route_template.json`.
 
-### Configuration Schema (`route.json`):
+### 🛠️ Interactive Route Editor (UI)
+You can configure, edit, or create new routes directly in the web browser using the **Route Editor & JSON Loader** modal:
+1. Click the **"Rotayı Düzenle / JSON Yükle" (Edit Route / Load JSON)** button in the sidebar.
+2. Under the **"Durak Ekle" (Add Stop)** tab, fill in the form with stop names, coordinates (latitude/longitude), cost, emojis, and transport types. It will immediately add the checkpoint and redraw the map paths.
+3. Under the **"JSON Yapıştır / Yükle" (Paste/Load JSON)** tab, you can paste a complete JSON configuration or choose a local `.json` file to apply it.
+4. Click **"Rotayı İndir (route.json)" (Download Route)** to export your configured itinerary as a `route.json` file. Place it in the `src/` directory to load it automatically next time.
+
+> [!IMPORTANT]
+> **Git Protection:** `route.json` is ignored in `.gitignore` to prevent you from accidentally committing or exposing your personal travel itineraries to GitHub. Keep your custom files locally or download them via the UI editor.
+
+### Configuration Schema (`route_template.json` / `route.json`):
 ```json
 {
   "config": {

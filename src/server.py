@@ -39,7 +39,7 @@ if __name__ == '__main__':
         print(f"❌ Error: Could not find an open port starting from {PORT} to {PORT + max_tries - 1}.")
         sys.exit(1)
         
-    print(f"❤️ Nazen Rota Server is active!")
+    print(f"❤️ AegisRoute Server is active!")
     print(f"🌍 Local: http://localhost:{port}")
     print(f"🔒 Tailscale/Network: Access via http://<your-tailscale-ip>:{port}")
     print("Press Ctrl+C to stop.")

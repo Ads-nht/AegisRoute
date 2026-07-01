@@ -1,0 +1,61 @@
+{
+  "config": {
+    "title": "AegisRoute",
+    "subtitle": "Interactive Custom Route Planner",
+    "map_center": [41.0240, 28.9950],
+    "map_zoom": 13,
+    "countdown_label": "Target Event Time",
+    "countdown_target": "20:00",
+    "countdown_hour": 20,
+    "countdown_minute": 0,
+    "footer_text": "Designed with AegisRoute. ❤️"
+  },
+  "itinerary": [
+    {
+      "id": 1,
+      "time": "13:00 - 13:30",
+      "title": "Meeting Point",
+      "locationName": "Central Pier",
+      "desc": "Gather at the main entrance to start the tour.",
+      "cost": 0,
+      "costLabel": "Free",
+      "emoji": "📍",
+      "type": "walk",
+      "coords": [41.02758, 29.01518],
+      "type_to_next": "walk",
+      "path_to_next": []
+    },
+    {
+      "id": 2,
+      "time": "13:30 - 14:30",
+      "title": "Lunch Break",
+      "locationName": "Seaside Restaurant",
+      "desc": "Enjoy a local meal with a sea view.",
+      "cost": 150,
+      "costLabel": "~150 TL",
+      "emoji": "🍽️",
+      "type": "walk",
+      "coords": [41.02429, 29.01552],
+      "type_to_next": "sea",
+      "path_to_next": [
+        [41.02758, 29.01518],
+        [41.02550, 28.99500],
+        [41.02167, 28.97667]
+      ]
+    },
+    {
+      "id": 3,
+      "time": "14:30 - 15:30",
+      "title": "Historical Site Visit",
+      "locationName": "Ancient Tower",
+      "desc": "Explore the historic tower and take panoramic photos.",
+      "cost": 50,
+      "costLabel": "50 TL",
+      "emoji": "🗼",
+      "type": "sea",
+      "coords": [41.02564, 28.97424],
+      "type_to_next": "walk",
+      "path_to_next": []
+    }
+  ]
+}
