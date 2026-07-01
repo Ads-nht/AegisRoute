@@ -1484,4 +1484,27 @@ body {
     margin-right: 4px;
 }
 
+/* ==============================================================================
+   Drag and Drop Timeline Reordering Styles
+   ============================================================================== */
+.timeline-card[draggable="true"] {
+    cursor: grab;
+}
+
+.timeline-card[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.timeline-card.dragging {
+    opacity: 0.4;
+    border: 1px dashed var(--primary-teal) !important;
+    transform: scale(0.98);
+}
+
+.timeline-card.drag-over {
+    border-top: 2px solid var(--primary-teal) !important;
+    margin-top: 6px;
+    transition: margin 0.2s ease, border-top 0.1s ease;
+}
+
 

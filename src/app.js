@@ -418,6 +418,57 @@ function renderTimeline() {
         card.addEventListener('click', () => {
             selectItineraryItem(item.id, true);
         });
+
+        // HTML5 Drag and Drop Reordering Setup
+        card.setAttribute('draggable', true);
+
+        card.addEventListener('dragstart', (e) => {
+            card.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', item.id);
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            document.querySelectorAll('.timeline-card').forEach(c => {
+                c.classList.remove('drag-over');
+            });
+        });
+
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (!card.classList.contains('dragging') && !card.classList.contains('add-stop-card')) {
+                card.classList.add('drag-over');
+            }
+        });
+
+        card.addEventListener('dragleave', () => {
+            card.classList.remove('drag-over');
+        });
+
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.classList.remove('drag-over');
+
+            const draggedId = parseInt(e.dataTransfer.getData('text/plain'));
+            const targetId = item.id;
+
+            if (draggedId && draggedId !== targetId) {
+                const draggedIndex = itinerary.findIndex(x => x.id === draggedId);
+                const targetIndex = itinerary.findIndex(x => x.id === targetId);
+
+                if (draggedIndex !== -1 && targetIndex !== -1) {
+                    // Shift item in the array
+                    const [draggedItem] = itinerary.splice(draggedIndex, 1);
+                    itinerary.splice(targetIndex, 0, draggedItem);
+                    
+                    // Re-render map layers & timeline cards instantly
+                    rebuildRouteUI();
+                    selectItineraryItem(draggedId, false);
+                }
+            }
+        });
         
         container.appendChild(card);
     });
