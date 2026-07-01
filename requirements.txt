@@ -1,0 +1,2 @@
+# Nazen Rota has zero external python dependencies.
+# The server is built using python's native standard libraries.

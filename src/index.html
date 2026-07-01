@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AegisRoute - İnteraktif Rota ve Gezi Planlayıcı</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Poka-Yoke offline fallback banner -->
+    <div id="offline-warning-banner" class="offline-banner" style="display: none;">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span>İnternet bağlantısı yok veya Harita modülü yüklenemedi. Rota çizelgeniz çevrimdışı modda hâlâ aktiftir!</span>
+        <button onclick="document.getElementById('offline-warning-banner').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    
+    <div class="app-container">
+        <!-- Sidebar containing Timeline -->
+        <aside class="sidebar">
+            <header class="app-header">
+                <div class="logo-area">
+                    <span class="compass-spin"><i class="fa-solid fa-compass"></i></span>
+                    <h1>AegisRoute</h1>
+                </div>
+                <p class="subtitle">İnteraktif Rota ve Gezi Planlayıcı</p>
+                
+                <!-- Dynamic Sunset & Budget Stats -->
+                <div class="stats-glass">
+                    <div class="stat-item">
+                        <span class="stat-icon"><i class="fa-solid fa-clock"></i></span>
+                        <div class="stat-info">
+                            <span class="stat-label">Hedef Zaman</span>
+                            <span class="stat-value highlight">--:--</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+                        <div class="stat-info">
+                            <span class="stat-label">Kalan Süre</span>
+                            <span id="countdown-timer" class="stat-value">--:--:--</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon"><i class="fa-solid fa-wallet"></i></span>
+                        <div class="stat-info">
+                            <span class="stat-label">Toplam Bütçe</span>
+                            <span class="stat-value" id="total-budget">0 TL</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Navigation Panel to Switch between Map and Timeline on Mobile -->
+            <div class="mobile-toggle-container">
+                <button class="toggle-btn active" id="btn-show-timeline"><i class="fa-solid fa-list-ul"></i> Zaman Çizelgesi</button>
+                <button class="toggle-btn" id="btn-show-map"><i class="fa-solid fa-map-location-dot"></i> İnteraktif Harita</button>
+            </div>
+
+            <!-- Route Timeline Cards -->
+            <div class="timeline-container" id="timeline-container">
+                <!-- Cards will be populated dynamically by JavaScript -->
+            </div>
+            
+            <footer class="sidebar-footer">
+                <p>AegisRoute ile mükemmel rotalar planlamak için tasarlanmıştır. ❤️</p>
+            </footer>
+        </aside>
+
+        <!-- Map Container -->
+        <main class="map-section" id="map-section">
+            <!-- Map Instance -->
+            <div id="map"></div>
+            
+            <!-- Map Quick Overlay Actions -->
+            <div class="map-overlay-controls">
+                <button class="map-control-btn active" id="toggle-layer-walking" title="Yürüyüş Yollarını Göster/Gizle">
+                    <span class="indicator walking"></span> Yürüyüş
+                </button>
+                <button class="map-control-btn active" id="toggle-layer-sea" title="Deniz Geçişlerini Göster/Gizle">
+                    <span class="indicator sea"></span> Deniz
+                </button>
+                <button class="map-control-btn active" id="toggle-layer-metro" title="Metro Geçişlerini Göster/Gizle">
+                    <span class="indicator metro"></span> Metro
+                </button>
+                <button class="map-control-btn" id="recenter-map" title="Tüm Rotayı Sığdır">
+                    <i class="fa-solid fa-arrows-to-eye"></i> Rotayı Sığdır
+                </button>
+            </div>
+
+            <!-- Floating Current Stop Card on Map for Quick Access -->
+            <div class="floating-stop-card" id="floating-stop-card">
+                <div class="floating-stop-header">
+                    <span class="floating-stop-time" id="float-time">12:30 - 13:00</span>
+                    <span class="floating-stop-badge" id="float-badge"><i class="fa-solid fa-ferry"></i></span>
+                </div>
+                <h3 id="float-title">Karaköy'e Ekonomik Geçiş</h3>
+                <p id="float-desc">Üsküdar Şehir Hatları iskelesinde buluşma ve vapurla karşıya geçiş.</p>
+                <div class="floating-stop-actions">
+                    <a href="#" target="_blank" id="float-walk-link" class="float-action-btn walk-btn">
+                        <i class="fa-solid fa-person-walking"></i> Yürüme Tarifi
+                    </a>
+                    <a href="#" target="_blank" id="float-transit-link" class="float-action-btn transit-btn">
+                        <i class="fa-solid fa-bus"></i> Toplu Taşıma
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Custom App JS -->
+    <script src="app.js"></script>
+</body>
+</html>
