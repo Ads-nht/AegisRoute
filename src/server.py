@@ -237,7 +237,24 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 "route_data": json.loads(row[3])
             })
 
+        elif self.path == '/docs/KULLANIM.md':
+            # Serve the usage guide markdown file
+            docs_path = os.path.join(os.path.dirname(__file__), '..', 'docs', 'KULLANIM.md')
+            docs_path = os.path.normpath(docs_path)
+            try:
+                with open(docs_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/plain; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(content.encode('utf-8'))
+            except FileNotFoundError:
+                self.send_error_response(404, "Docs not found")
+            return
+
         elif self.path.startswith('/api/search'):
+
             from urllib.parse import urlparse, parse_qs
             import urllib.parse
             import urllib.request

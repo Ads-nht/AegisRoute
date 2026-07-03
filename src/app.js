@@ -1557,13 +1557,109 @@ function registerControls() {
         });
     }
 
-    // Google Maps Sync Button Event Listener
-    const syncRouteBtn = document.getElementById('btn-sync-route');
-    if (syncRouteBtn) {
-        syncRouteBtn.addEventListener('click', () => {
-            syncRouteWithAI();
+    // Help Modal Event Listeners
+    const btnOpenHelp = document.getElementById('btn-open-help');
+    const helpModal = document.getElementById('help-modal');
+    const btnCloseHelp = document.getElementById('btn-close-help');
+    const helpModalBody = document.getElementById('help-modal-body');
+    let helpLoaded = false;
+
+    if (btnOpenHelp) {
+        btnOpenHelp.addEventListener('click', () => {
+            helpModal.style.display = 'flex';
+            if (!helpLoaded) {
+                fetch('/docs/KULLANIM.md')
+                    .then(res => {
+                        if (!res.ok) throw new Error('Yardım dosyası bulunamadı.');
+                        return res.text();
+                    })
+                    .then(md => {
+                        helpModalBody.innerHTML = renderHelpMarkdown(md);
+                        helpLoaded = true;
+                    })
+                    .catch(err => {
+                        helpModalBody.innerHTML = `
+                            <div style="text-align:center; padding: 40px; color: var(--text-muted);">
+                                <i class="fa-solid fa-triangle-exclamation" style="font-size:28px; color:#e76f51;"></i>
+                                <p style="margin-top: 12px;">${err.message}</p>
+                            </div>`;
+                    });
+            }
         });
     }
+
+    if (btnCloseHelp) {
+        btnCloseHelp.addEventListener('click', () => {
+            helpModal.style.display = 'none';
+        });
+    }
+
+    if (helpModal) {
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) helpModal.style.display = 'none';
+        });
+    }
+}
+
+// ==========================================
+// HELP MODAL — Markdown Renderer
+// ==========================================
+function renderHelpMarkdown(md) {
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // Code blocks
+    md = md.replace(/```(\w*)\n([\s\S]*?)```/gm, (_, lang, code) =>
+        `<pre style="background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px;overflow-x:auto;font-size:13px;line-height:1.6;margin:16px 0;"><code>${esc(code.trim())}</code></pre>`);
+
+    // Inline code
+    md = md.replace(/`([^`]+)`/g, (_, c) =>
+        `<code style="background:rgba(42,157,143,0.15);color:var(--primary-teal);padding:2px 7px;border-radius:5px;font-size:13px;">${esc(c)}</code>`);
+
+    // Headings
+    md = md.replace(/^### (.+)$/gm, (_, t) =>
+        `<h3 style="font-size:15px;font-weight:700;color:var(--primary-teal);margin:24px 0 10px;display:flex;align-items:center;gap:8px;"><span style="display:inline-block;width:4px;height:16px;background:var(--primary-teal);border-radius:2px;flex-shrink:0;"></span>${t}</h3>`);
+    md = md.replace(/^## (.+)$/gm, (_, t) =>
+        `<h2 style="font-size:18px;font-weight:700;color:var(--text-light);margin:32px 0 14px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);">${t}</h2>`);
+    md = md.replace(/^# (.+)$/gm, (_, t) =>
+        `<h1 style="font-size:22px;font-weight:800;color:var(--text-light);margin:0 0 20px;padding:20px;background:rgba(42,157,143,0.08);border-radius:12px;border-left:4px solid var(--primary-teal);">${t}</h1>`);
+
+    // Horizontal rule
+    md = md.replace(/^---$/gm, '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:24px 0;">');
+
+    // Blockquote
+    md = md.replace(/^> (.+)$/gm, (_, t) =>
+        `<blockquote style="border-left:3px solid var(--primary-teal);margin:12px 0;padding:10px 16px;background:rgba(42,157,143,0.06);border-radius:0 8px 8px 0;color:var(--text-muted);font-style:italic;">${t}</blockquote>`);
+
+    // Bold
+    md = md.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-light);">$1</strong>');
+
+    // Tables
+    md = md.replace(/(\|.+\|\n)(\|[-| :]+\|\n)((\|.+\|\n?)*)/gm, (match) => {
+        const rows = match.trim().split('\n').filter(r => r.trim());
+        const makeCell = (r, tag) => r.replace(/^\||\|$/g,'').split('|')
+            .map(c => `<${tag} style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:left;">${c.trim()}</${tag}>`).join('');
+        const header = `<thead><tr style="background:rgba(42,157,143,0.12);">${makeCell(rows[0],'th')}</tr></thead>`;
+        const body = `<tbody>${rows.slice(2).map(r=>`<tr>${makeCell(r,'td')}</tr>`).join('')}</tbody>`;
+        return `<div style="overflow-x:auto;margin:16px 0;"><table style="width:100%;border-collapse:collapse;font-size:13px;">${header}${body}</table></div>`;
+    });
+
+    // Checkboxes
+    md = md.replace(/^- \[x\] (.+)$/gm, (_, t) =>
+        `<li style="margin:5px 0 5px 8px;color:var(--text-muted);list-style:none;display:flex;align-items:center;gap:8px;"><span style="color:#2a9d8f;">✅</span><span style="text-decoration:line-through;opacity:0.6;">${t}</span></li>`);
+    md = md.replace(/^- \[ \] (.+)$/gm, (_, t) =>
+        `<li style="margin:5px 0 5px 8px;color:var(--text-muted);list-style:none;display:flex;align-items:center;gap:8px;"><span>⬜</span>${t}</li>`);
+
+    // Lists
+    md = md.replace(/^(\d+)\. (.+)$/gm, (_, n, t) =>
+        `<li style="margin:6px 0 6px 20px;color:var(--text-muted);line-height:1.6;list-style-type:decimal;">${t}</li>`);
+    md = md.replace(/^- (.+)$/gm, (_, t) =>
+        `<li style="margin:6px 0 6px 20px;color:var(--text-muted);line-height:1.6;list-style-type:disc;">${t}</li>`);
+
+    // Paragraphs
+    md = md.replace(/^(?!<[a-zA-Z\/])(.+)$/gm, (_, t) =>
+        `<p style="margin:8px 0;color:var(--text-muted);line-height:1.75;font-size:14px;">${t}</p>`);
+
+    return `<div style="font-family:inherit;">${md}</div>`;
 }
 
 // Synchronize Route coordinates and details using AI Routing Engine

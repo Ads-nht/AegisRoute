@@ -61,12 +61,14 @@
                         </div>
                     </div>
                 </div>
-                <button class="edit-route-btn" id="btn-open-editor">
-                    <i class="fa-solid fa-pen-to-square"></i> Rotayı Düzenle / JSON Yükle
-                </button>
-                <button class="edit-route-btn sync-btn" id="btn-sync-route">
-                    <i class="fa-solid fa-arrows-spin"></i> Google Haritalarla Sync Et
-                </button>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button class="edit-route-btn" id="btn-open-editor" style="flex: 1; margin-top: 0;">
+                        <i class="fa-solid fa-pen-to-square"></i> Düzenle / JSON Yükle
+                    </button>
+                    <button class="edit-route-btn" id="btn-open-help" title="Nasıl Kullanılır?" style="margin-top: 0; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); flex-shrink: 0; padding: 8px 14px;">
+                        <i class="fa-solid fa-circle-question"></i> Yardım
+                    </button>
+                </div>
                 <div class="header-action-row" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; width: 100%;">
                     <button class="edit-route-btn" id="btn-login-modal" style="margin-top: 0; background-color: var(--surface-highest); border: 1px solid var(--outline-variant); flex: 1 1 auto; font-size: 12px; padding: 8px 12px;">
                         <i class="fa-solid fa-user"></i> Giriş Yap
@@ -364,6 +366,22 @@
             <div class="modal-body">
                 <div id="routes-list-container" style="display: flex; flex-direction: column; gap: 10px;">
                     <!-- Routes will be listed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card" style="max-width: 720px; max-height: 88vh;">
+            <div class="modal-header" style="position: sticky; top: 0; z-index: 1; background: var(--bg-card);">
+                <h2><i class="fa-solid fa-circle-question"></i> Nasıl Kullanılır?</h2>
+                <button class="close-modal-btn" id="btn-close-help"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="help-modal-body" style="overflow-y: auto; padding: 24px;">
+                <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px;"></i>
+                    <p style="margin-top: 12px;">Yükleniyor...</p>
                 </div>
             </div>
         </div>
