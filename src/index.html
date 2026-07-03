@@ -61,26 +61,24 @@
                         </div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px; margin-top: 8px;">
-                    <button class="edit-route-btn" id="btn-open-editor" style="flex: 1; margin-top: 0;">
-                        <i class="fa-solid fa-pen-to-square"></i> Düzenle / JSON Yükle
-                    </button>
-                    <button class="edit-route-btn" id="btn-open-help" title="Nasıl Kullanılır?" style="margin-top: 0; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); flex-shrink: 0; padding: 8px 14px;">
-                        <i class="fa-solid fa-circle-question"></i> Yardım
-                    </button>
-                </div>
-                <div class="header-action-row" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; width: 100%;">
-                    <button class="edit-route-btn" id="btn-login-modal" style="margin-top: 0; background-color: var(--surface-highest); border: 1px solid var(--outline-variant); flex: 1 1 auto; font-size: 12px; padding: 8px 12px;">
+                <button class="edit-route-btn" id="btn-open-editor">
+                    <i class="fa-solid fa-pen-to-square"></i> Rotayı Düzenle / JSON Yükle
+                </button>
+                <div class="header-action-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-top: 10px; width: 100%;">
+                    <button class="edit-route-btn" id="btn-login-modal" style="margin-top: 0; background-color: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); font-size: 12px; padding: 8px 10px;">
                         <i class="fa-solid fa-user"></i> Giriş Yap
                     </button>
-                    <button class="edit-route-btn" id="btn-my-routes" style="display: none; margin-top: 0; background-color: var(--surface-highest); border: 1px solid var(--outline-variant); flex: 1 1 auto; font-size: 12px; padding: 8px 12px;">
+                    <button class="edit-route-btn" id="btn-my-routes" style="display: none; margin-top: 0; background-color: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); font-size: 12px; padding: 8px 10px;">
                         <i class="fa-solid fa-folder-open"></i> Rotalarım
                     </button>
-                    <button class="edit-route-btn sync-btn" id="btn-save-route" style="display: none; margin-top: 0; flex: 1 1 auto; font-size: 12px; padding: 8px 12px;">
+                    <button class="edit-route-btn sync-btn" id="btn-save-route" style="display: none; margin-top: 0; font-size: 12px; padding: 8px 10px;">
                         <i class="fa-solid fa-cloud-arrow-up"></i> Kaydet
                     </button>
-                    <button class="edit-route-btn" id="btn-share-route" style="display: none; margin-top: 0; background-color: var(--primary-teal); color: #fff; flex: 1 1 auto; font-size: 12px; padding: 8px 12px;">
+                    <button class="edit-route-btn" id="btn-share-route" style="display: none; margin-top: 0; background-color: var(--primary-teal); color: #fff; border: 1px solid rgba(42, 157, 143, 0.3); font-size: 12px; padding: 8px 10px;">
                         <i class="fa-solid fa-share-nodes"></i> Paylaş
+                    </button>
+                    <button class="edit-route-btn" id="btn-open-help" title="Nasıl Kullanılır?" style="margin-top: 0; background-color: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); font-size: 12px; padding: 8px 10px;">
+                        <i class="fa-solid fa-circle-question"></i> Yardım
                     </button>
                 </div>
             </header>

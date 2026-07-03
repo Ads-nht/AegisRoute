@@ -222,8 +222,8 @@ body {
 .timeline-container::before {
     content: '';
     position: absolute;
-    top: 32px;
-    bottom: 32px;
+    top: 24px;
+    bottom: 24px;
     left: 42px; /* Centered relative to card icon placement */
     width: 2px;
     background: linear-gradient(to bottom, 
@@ -232,7 +232,7 @@ body {
         var(--accent-rose), 
         var(--metro-purple)
     );
-    opacity: 0.2;
+    opacity: 0.45; /* Increased opacity from 0.2 to 0.45 for better visibility */
     z-index: 1;
 }
 
