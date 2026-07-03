@@ -19,3 +19,9 @@ __pycache__/
 route.json
 src/route.json
 src/route_default.json
+
+# Database & uploads (personal data, Docker volume)
+src/aegis.db
+aegis.db
+src/uploads/
+data/

@@ -1,0 +1,17 @@
+services:
+  aegisroute:
+    build: .
+    container_name: aegisroute_app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - AEGIS_DB_PATH=/app/data/aegis.db
+      - AEGIS_UPLOAD_DIR=/app/data/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

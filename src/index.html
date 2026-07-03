@@ -67,13 +67,23 @@
                 <button class="edit-route-btn sync-btn" id="btn-sync-route">
                     <i class="fa-solid fa-arrows-spin"></i> Google Haritalarla Sync Et
                 </button>
+                <div class="header-action-row" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; width: 100%;">
+                    <button class="edit-route-btn" id="btn-login-modal" style="margin-top: 0; background-color: var(--surface-highest); border: 1px solid var(--outline-variant); flex: 1 1 auto; font-size: 12px; padding: 8px 12px;">
+                        <i class="fa-solid fa-user"></i> Giriş Yap
+                    </button>
+                    <button class="edit-route-btn" id="btn-my-routes" style="display: none; margin-top: 0; background-color: var(--surface-highest); border: 1px solid var(--outline-variant); flex: 1 1 auto; font-size: 12px; padding: 8px 12px;">
+                        <i class="fa-solid fa-folder-open"></i> Rotalarım
+                    </button>
+                    <button class="edit-route-btn sync-btn" id="btn-save-route" style="display: none; margin-top: 0; flex: 1 1 auto; font-size: 12px; padding: 8px 12px;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Kaydet
+                    </button>
+                    <button class="edit-route-btn" id="btn-share-route" style="display: none; margin-top: 0; background-color: var(--primary-teal); color: #fff; flex: 1 1 auto; font-size: 12px; padding: 8px 12px;">
+                        <i class="fa-solid fa-share-nodes"></i> Paylaş
+                    </button>
+                </div>
             </header>
 
-            <!-- Navigation Panel to Switch between Map and Timeline on Mobile -->
-            <div class="mobile-toggle-container">
-                <button class="toggle-btn active" id="btn-show-timeline"><i class="fa-solid fa-list-ul"></i> Zaman Çizelgesi</button>
-                <button class="toggle-btn" id="btn-show-map"><i class="fa-solid fa-map-location-dot"></i> İnteraktif Harita</button>
-            </div>
+
 
             <!-- Route Timeline Cards -->
             <div class="timeline-container" id="timeline-container">
@@ -87,6 +97,16 @@
 
         <!-- Map Container -->
         <main class="map-section" id="map-section">
+            <!-- Map Search Location Bar -->
+            <div class="map-search-container">
+                <div class="search-input-wrapper">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="map-search-input" placeholder="Konum Ara (örn: Kadıköy metro)..." autocomplete="off">
+                    <button type="button" id="btn-clear-search" style="display: none;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="search-results-dropdown" id="search-results-dropdown" style="display: none;"></div>
+            </div>
+            
             <!-- Map Instance -->
             <div id="map"></div>
             
@@ -124,6 +144,11 @@
                 </div>
             </div>
         </main>
+        <!-- Navigation Panel to Switch between Map and Timeline on Mobile -->
+        <div class="mobile-toggle-container">
+            <button class="toggle-btn active" id="btn-show-timeline"><i class="fa-solid fa-list-ul"></i> Zaman Çizelgesi</button>
+            <button class="toggle-btn" id="btn-show-map"><i class="fa-solid fa-map-location-dot"></i> İnteraktif Harita</button>
+        </div>
     </div>
 
     <!-- Edit Route Modal -->
@@ -160,12 +185,28 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="stop-time">Saat Aralığı</label>
-                                <input type="text" id="stop-time" placeholder="Örn: 14:00 - 15:00" required>
+                                <label for="stop-time-start">Saat Aralığı</label>
+                                <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                                    <input type="time" id="stop-time-start" required style="flex: 1; padding: 8px 10px; font-size: 14px;">
+                                    <span style="color: var(--text-muted); font-size: 12px;">veya</span>
+                                    <input type="time" id="stop-time-end" style="flex: 1; padding: 8px 10px; font-size: 14px;">
+                                </div>
                             </div>
                             <div class="form-group">
-                                <label for="stop-emoji">Emoji</label>
-                                <input type="text" id="stop-emoji" placeholder="Örn: 🗼" required>
+                                <label>Emoji Seçin</label>
+                                <input type="hidden" id="stop-emoji" value="📍">
+                                <div class="emoji-selector-grid">
+                                    <button type="button" class="emoji-opt active" data-emoji="📍">📍</button>
+                                    <button type="button" class="emoji-opt" data-emoji="✈️">✈️</button>
+                                    <button type="button" class="emoji-opt" data-emoji="🚢">🚢</button>
+                                    <button type="button" class="emoji-opt" data-emoji="🚇">🚇</button>
+                                    <button type="button" class="emoji-opt" data-emoji="🚗">🚗</button>
+                                    <button type="button" class="emoji-opt" data-emoji="🏨">🏨</button>
+                                    <button type="button" class="emoji-opt" data-emoji="🍽️">🍽️</button>
+                                    <button type="button" class="emoji-opt" data-emoji="☕">☕</button>
+                                    <button type="button" class="emoji-opt" data-emoji="🎡">🎡</button>
+                                    <button type="button" class="emoji-opt" data-emoji="🏖️">🏖️</button>
+                                </div>
                             </div>
                         </div>
                         <div class="form-row">
@@ -184,19 +225,63 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="stop-cost">Maliyet (TL)</label>
-                                <input type="number" id="stop-cost" value="0" required>
+                                <input type="number" id="stop-cost" value="0" required min="0">
+                                <div class="quick-cost-buttons">
+                                    <button type="button" class="quick-cost-btn" data-cost="0">Bedava</button>
+                                    <button type="button" class="quick-cost-btn" data-cost="50">50 TL</button>
+                                    <button type="button" class="quick-cost-btn" data-cost="100">100 TL</button>
+                                    <button type="button" class="quick-cost-btn" data-cost="250">250 TL</button>
+                                    <button type="button" class="quick-cost-btn" data-cost="500">500 TL</button>
+                                </div>
                             </div>
                             <div class="form-group">
-                                <label for="stop-type">Durak Tipi</label>
-                                <select id="stop-type">
-                                    <option value="walk">Yürüyüş (Walk)</option>
-                                    <option value="sea">Deniz Yolu (Sea)</option>
-                                    <option value="metro">Metro</option>
-                                    <option value="drive">Araç (Drive)</option>
-                                </select>
+                                <label>Durak Ulaşım Tipi</label>
+                                <input type="hidden" id="stop-type" value="walk">
+                                <div class="type-selector-grid">
+                                    <button type="button" class="type-opt active" data-type="walk"><i class="fa-solid fa-person-walking"></i> Yürü</button>
+                                    <button type="button" class="type-opt" data-type="sea"><i class="fa-solid fa-ferry"></i> Deniz</button>
+                                    <button type="button" class="type-opt" data-type="metro"><i class="fa-solid fa-subway"></i> Metro</button>
+                                    <button type="button" class="type-opt" data-type="drive"><i class="fa-solid fa-car"></i> Sürüş</button>
+                                    <button type="button" class="type-opt" id="btn-custom-type-trigger"><i class="fa-solid fa-ellipsis"></i> Diğer</button>
+                                </div>
+                                <div id="custom-type-container" style="display: none; margin-top: 8px;">
+                                    <input type="text" id="stop-type-custom" list="type-options" placeholder="Örn: Vapur, Bisiklet...">
+                                    <datalist id="type-options">
+                                        <option value="walk">Yürüyüş</option>
+                                        <option value="sea">Deniz Yolu</option>
+                                        <option value="metro">Metro</option>
+                                        <option value="drive">Araç</option>
+                                        <option value="bus">Otobüs</option>
+                                        <option value="bike">Bisiklet</option>
+                                    </datalist>
+                                </div>
                             </div>
                         </div>
-                        <button type="submit" class="form-submit-btn"><i class="fa-solid fa-plus"></i> Rotaya Ekle</button>
+                        
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label for="stop-notes"><i class="fa-solid fa-note-sticky"></i> Etkinlik Notları / Görevler</label>
+                            <textarea id="stop-notes" rows="4" placeholder="Örn:&#10;### Görev Dağılımı&#10;- [ ] Ahmet: Mangal kömürü alacak&#10;- [x] Mehmet: Etleri marine etti"></textarea>
+                            
+                            <!-- Quick Task checklist generator helper -->
+                            <div class="quick-task-helper">
+                                <input type="text" id="quick-task-input" placeholder="Hızlı Görev Ekle (örn: Biletleri al)...">
+                                <button type="button" id="btn-add-quick-task">
+                                    <i class="fa-solid fa-plus"></i> Ekle
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label for="stop-image"><i class="fa-solid fa-image"></i> Görsel / Ekran Görüntüsü Yükle</label>
+                            <input type="file" id="stop-image" accept="image/*" style="font-size: 14px;">
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button type="submit" class="form-submit-btn" style="flex: 2; margin-top: 0;"><i class="fa-solid fa-plus"></i> Rotaya Ekle</button>
+                            <button type="button" class="modal-action-btn danger-btn" id="btn-delete-stop" style="display: none; flex: 1; align-items: center; justify-content: center; gap: 6px; padding: 10px; margin-top: 0; font-size: 14px;">
+                                <i class="fa-solid fa-trash-can"></i> Durağı Sil
+                            </button>
+                        </div>
                     </form>
                 </div>
                 
@@ -223,6 +308,63 @@
                 <button type="button" class="modal-action-btn danger-btn" id="btn-clear-route">
                     <i class="fa-solid fa-trash-can"></i> Tümünü Sil
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-user"></i> Kullanıcı Girişi</h2>
+                <button class="close-modal-btn" id="btn-close-auth"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-tabs">
+                    <button class="modal-tab-btn active" id="tab-btn-login">Giriş Yap</button>
+                    <button class="modal-tab-btn" id="tab-btn-register">Kayıt Ol</button>
+                </div>
+                <div id="tab-content-login" class="tab-content active">
+                    <form id="login-form" class="editor-form">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Kullanıcı Adı</label>
+                            <input type="text" id="login-username" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Şifre</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit" class="form-submit-btn"><i class="fa-solid fa-right-to-bracket"></i> Giriş Yap</button>
+                    </form>
+                </div>
+                <div id="tab-content-register" class="tab-content">
+                    <form id="register-form" class="editor-form">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Yeni Kullanıcı Adı</label>
+                            <input type="text" id="register-username" minlength="3" maxlength="20" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Şifre</label>
+                            <input type="password" id="register-password" minlength="6" maxlength="50" required>
+                        </div>
+                        <button type="submit" class="form-submit-btn"><i class="fa-solid fa-user-plus"></i> Kayıt Ol</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Routes Modal -->
+    <div id="my-routes-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-folder-open"></i> Kaydedilen Rotalarım</h2>
+                <button class="close-modal-btn" id="btn-close-routes"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="routes-list-container" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Routes will be listed here -->
+                </div>
             </div>
         </div>
     </div>

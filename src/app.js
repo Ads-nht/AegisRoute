@@ -20,6 +20,105 @@ let activeLayers = {
 let mapEnabled = typeof L !== 'undefined';
 let countdownInterval;
 let tempMarker = null;
+let currentRouteId = null;
+let editingStopId = null;
+
+// Markdown & Task Checklist Parser (Obsidian style)
+function renderMarkdown(md, stopId) {
+    if (!md) return '';
+    
+    let lines = md.split('\n');
+    let html = [];
+    let inList = false;
+    let todoIndex = 0;
+    
+    lines.forEach(line => {
+        let trimmed = line.trim();
+        
+        // Headers
+        if (trimmed.startsWith('### ')) {
+            if (inList) { html.push('</ul>'); inList = false; }
+            html.push(`<h4 style="margin: 10px 0 5px 0; color: var(--primary-teal); font-size: 14px; font-weight: 600;"><i class="fa-solid fa-hashtag" style="font-size: 10px; opacity: 0.6; margin-right: 4px;"></i>${trimmed.substring(4)}</h4>`);
+        } else if (trimmed.startsWith('## ')) {
+            if (inList) { html.push('</ul>'); inList = false; }
+            html.push(`<h3 style="margin: 12px 0 6px 0; color: var(--primary-teal); font-size: 15px; font-weight: 600;"><i class="fa-solid fa-hashtag" style="font-size: 12px; opacity: 0.6; margin-right: 4px;"></i>${trimmed.substring(3)}</h3>`);
+        } else if (trimmed.startsWith('# ')) {
+            if (inList) { html.push('</ul>'); inList = false; }
+            html.push(`<h2 style="margin: 14px 0 8px 0; color: var(--primary-teal); font-size: 16px; font-weight: 700;"><i class="fa-solid fa-hashtag" style="font-size: 13px; opacity: 0.6; margin-right: 4px;"></i>${trimmed.substring(2)}</h2>`);
+        }
+        // Task Checklist - [ ] or - [x]
+        else if (trimmed.startsWith('- [ ] ') || trimmed.startsWith('- [x] ') || trimmed.startsWith('- [ ]') || trimmed.startsWith('- [x]')) {
+            if (!inList) { html.push('<ul style="list-style: none; padding-left: 0; margin: 8px 0;">'); inList = true; }
+            const isChecked = trimmed.includes('[x]');
+            // Extract task text: skip "- [ ] " or "- [x] "
+            let taskText = trimmed.replace(/^-\s*\[[ xX]\]\s*/, '');
+            
+            html.push(`
+                <li style="display: flex; align-items: flex-start; gap: 8px; margin: 6px 0; font-size: 13px; line-height: 1.4;">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} 
+                           onchange="toggleRouteTodo(${stopId}, ${todoIndex}); event.stopPropagation();" 
+                           style="margin-top: 3px; cursor: pointer; width: 15px; height: 15px; accent-color: var(--primary-teal);">
+                    <span style="${isChecked ? 'text-decoration: line-through; opacity: 0.5;' : 'color: var(--text-normal);'}">${taskText}</span>
+                </li>
+            `);
+            todoIndex++;
+        }
+        // Normal List - item
+        else if (trimmed.startsWith('- ')) {
+            if (!inList) { html.push('<ul style="padding-left: 20px; margin: 8px 0; list-style-type: disc;">'); inList = true; }
+            html.push(`<li style="margin: 4px 0; font-size: 13px; color: var(--text-normal);">${trimmed.substring(2)}</li>`);
+        }
+        // Empty line
+        else if (trimmed === '') {
+            if (inList) { html.push('</ul>'); inList = false; }
+            html.push('<div style="height: 6px;"></div>');
+        }
+        // Plain text paragraph
+        else {
+            if (inList) { html.push('</ul>'); inList = false; }
+            html.push(`<p style="margin: 4px 0; font-size: 13px; line-height: 1.5; color: var(--text-normal);">${line}</p>`);
+        }
+    });
+    
+    if (inList) {
+        html.push('</ul>');
+    }
+    
+    return html.join('');
+}
+
+// Global todo toggle function for onclick/onchange in card markup
+window.toggleRouteTodo = function(stopId, taskIndex) {
+    console.log(`[TodoToggle] stopId: ${stopId}, taskIndex: ${taskIndex}`);
+    const stop = itinerary.find(s => s.id === stopId);
+    if (!stop || !stop.notes) return;
+    
+    let lines = stop.notes.split('\n');
+    let todoCount = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+        let trimmed = lines[i].trim();
+        // Regex to match task lines
+        if (/^-\s*\[[ xX]\]/.test(trimmed)) {
+            if (todoCount === taskIndex) {
+                if (trimmed.includes('[ ]')) {
+                    lines[i] = lines[i].replace('[ ]', '[x]');
+                } else {
+                    lines[i] = lines[i].replace('[x]', '[ ]').replace('[X]', '[ ]');
+                }
+                console.log(`[TodoToggle] Swapped line: ${lines[i]}`);
+                break;
+            }
+            todoCount++;
+        }
+    }
+    
+    stop.notes = lines.join('\n');
+    rebuildRouteUI();
+    
+    // Trigger silent save or notify user to save
+    console.log("[TodoToggle] State updated, triggering save indicator.");
+};
 
 // 1. Fetch Route Configuration and Bootstrap
 document.addEventListener('DOMContentLoaded', () => {
@@ -113,6 +212,35 @@ function loadRouteData(data) {
     }
 }
 
+// Dynamic datalist suggestion generator for previously added stop types
+function updateDatalistSuggestions() {
+    const datalist = document.getElementById('type-options');
+    if (!datalist) return;
+    
+    // Default types
+    const defaultTypes = new Set(['walk', 'sea', 'metro', 'drive', 'bus', 'bike']);
+    
+    // Collect unique custom types from current itinerary
+    itinerary.forEach(item => {
+        if (item.type && item.type.trim()) {
+            defaultTypes.add(item.type.trim());
+        }
+    });
+    
+    // Rebuild options HTML
+    datalist.innerHTML = Array.from(defaultTypes).map(type => {
+        let label = type;
+        if (type === 'walk') label = 'Yürüyüş';
+        else if (type === 'sea') label = 'Deniz Yolu';
+        else if (type === 'metro') label = 'Metro';
+        else if (type === 'drive') label = 'Araç';
+        else if (type === 'bus') label = 'Otobüs';
+        else if (type === 'bike') label = 'Bisiklet';
+        
+        return `<option value="${type}">${label}</option>`;
+    }).join('');
+}
+
 // Clear map overlays and rebuild all visual routes
 function rebuildRouteUI() {
     clearMapOverlays();
@@ -120,6 +248,7 @@ function rebuildRouteUI() {
     initMapInstance();
     startSunsetCountdown();
     calculateTotalBudget();
+    updateDatalistSuggestions();
     
     if (mapEnabled) {
         drawRouteMarkers();
@@ -404,6 +533,15 @@ function renderTimeline() {
                 </div>
                 <h3>${item.title}</h3>
                 <p>${item.desc}</p>
+                ${item.notes ? `
+                <div class="card-notes" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 12px 14px; border-radius: 8px; margin-top: 12px; border-left: 3px solid var(--primary-teal); box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary-teal); margin-bottom: 8px;">
+                        <i class="fa-solid fa-note-sticky"></i> Görev & Notlar
+                    </div>
+                    ${renderMarkdown(item.notes, item.id)}
+                </div>
+                ` : ''}
+                ${item.image ? `<div class="card-image"><img src="${item.image}" style="max-width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid rgba(255,255,255,0.1);"></div>` : ''}
                 <div class="card-actions">
                     <a href="${walkDir}" target="_blank" class="card-action-link" onclick="event.stopPropagation();">
                         <i class="fa-solid fa-person-walking"></i> Yol Tarifi
@@ -411,12 +549,32 @@ function renderTimeline() {
                     <a href="${transitDir}" target="_blank" class="card-action-link" onclick="event.stopPropagation();">
                         <i class="fa-solid fa-bus"></i> Toplu Taşıma
                     </a>
+                    <button class="card-action-link edit-btn" style="background: transparent; border: none; cursor: pointer; color: var(--primary-teal); font-family: inherit; font-size: inherit;" onclick="event.stopPropagation(); window.openEditStopModal(${item.id});">
+                        <i class="fa-solid fa-pen-to-square"></i> Düzenle
+                    </button>
                 </div>
             </div>
         `;
         
         card.addEventListener('click', () => {
             selectItineraryItem(item.id, true);
+        });
+
+        card.addEventListener('dblclick', () => {
+            window.openEditStopModal(item.id);
+        });
+
+        // Mobile double-tap gesture listener to trigger editing
+        let lastTapTime = 0;
+        card.addEventListener('touchend', (e) => {
+            const now = new Date().getTime();
+            const timeSinceLastTap = now - lastTapTime;
+            if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+                e.preventDefault();
+                console.log(`[DoubleTap Mobile] Detected on card ID: ${item.id}`);
+                window.openEditStopModal(item.id);
+            }
+            lastTapTime = now;
         });
 
         // HTML5 Drag and Drop Reordering Setup
@@ -664,6 +822,53 @@ function registerControls() {
         });
     }
 
+    // --- SWIPE GESTURES FOR MOBILE VIEW SWITCHING ---
+    let touchstartX = 0;
+    let touchstartY = 0;
+    let touchendX = 0;
+    let touchendY = 0;
+
+    const handleSwipeGesture = () => {
+        const diffX = touchendX - touchstartX;
+        const diffY = touchendY - touchstartY;
+        
+        // Horizontal swipe threshold: 70px minimum
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 70) {
+            console.log(`[Swipe] Horizontal swipe detected. diffX: ${diffX}`);
+            if (diffX < 0) {
+                // Swipe Left -> Show Map
+                if (btnMap && !btnMap.classList.contains('active')) {
+                    console.log("[Swipe] Swiping Left. Activating Map.");
+                    btnMap.click();
+                }
+            } else {
+                // Swipe Right -> Show Timeline
+                if (btnTimeline && !btnTimeline.classList.contains('active')) {
+                    console.log("[Swipe] Swiping Right. Activating Timeline.");
+                    btnTimeline.click();
+                }
+            }
+        }
+    };
+
+    document.addEventListener('touchstart', e => {
+        // Ignore gestures that start inside Leaflet controls or interactive map
+        if (e.target.closest('#map') || e.target.closest('.map-control-btn') || e.target.closest('.leaflet-control')) {
+            return;
+        }
+        touchstartX = e.changedTouches[0].screenX;
+        touchstartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => {
+        if (e.target.closest('#map') || e.target.closest('.map-control-btn') || e.target.closest('.leaflet-control')) {
+            return;
+        }
+        touchendX = e.changedTouches[0].screenX;
+        touchendY = e.changedTouches[0].screenY;
+        handleSwipeGesture();
+    }, { passive: true });
+
     // --- ROTA EDİTÖRÜ MODAL ETKİLEŞİMLERİ ---
     const modal = document.getElementById('route-editor-modal');
     const openBtn = document.getElementById('btn-open-editor');
@@ -690,12 +895,139 @@ function registerControls() {
     // Open/Close Modal
     if (openBtn && modal) {
         openBtn.addEventListener('click', () => {
+            editingStopId = null;
+            addForm.reset();
+            
+            // Reset emoji active class to default
+            document.querySelectorAll('.emoji-opt').forEach(btn => btn.classList.remove('active'));
+            const defaultEmojiBtn = document.querySelector('.emoji-opt[data-emoji="📍"]');
+            if (defaultEmojiBtn) defaultEmojiBtn.classList.add('active');
+            document.getElementById('stop-emoji').value = '📍';
+
+            // Reset type active class to default
+            document.querySelectorAll('.type-opt').forEach(btn => btn.classList.remove('active'));
+            const defaultTypeBtn = document.querySelector('.type-opt[data-type="walk"]');
+            if (defaultTypeBtn) defaultTypeBtn.classList.add('active');
+            document.getElementById('stop-type').value = 'walk';
+            const customTypeContainer = document.getElementById('custom-type-container');
+            if (customTypeContainer) customTypeContainer.style.display = 'none';
+
+            const submitBtn = addForm.querySelector('.form-submit-btn');
+            if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Rotaya Ekle';
+            
+            const tabFormBtn = document.getElementById('tab-btn-form');
+            if (tabFormBtn) tabFormBtn.innerText = "Durak Ekle";
+            
+            const coordsPreview = document.getElementById('coords-preview');
+            if (coordsPreview) coordsPreview.style.display = 'none';
+
+            const deleteStopBtn = document.getElementById('btn-delete-stop');
+            if (deleteStopBtn) deleteStopBtn.style.display = 'none';
+
             modal.style.display = 'flex';
             modal.classList.remove('map-picking');
             // Pre-fill JSON area with current config + itinerary
             const currentData = { config: appConfig, itinerary: itinerary };
             const jsonInput = document.getElementById('json-input');
             if (jsonInput) jsonInput.value = JSON.stringify(currentData, null, 2);
+        });
+    }
+
+    // Modal Edit Stop function
+    window.openEditStopModal = function(stopId) {
+        console.log(`[EditStop] Opening editor for stopId: ${stopId}`);
+        const stop = itinerary.find(s => s.id === stopId);
+        if (!stop) return;
+        
+        editingStopId = stopId;
+        
+        // Fill form fields
+        document.getElementById('stop-title').value = stop.title || '';
+        document.getElementById('stop-location').value = stop.locationName || '';
+        document.getElementById('stop-notes').value = stop.notes || '';
+        document.getElementById('stop-cost').value = stop.cost || 0;
+        document.getElementById('stop-emoji').value = stop.emoji || '📍';
+        document.getElementById('stop-type').value = stop.type || 'walk';
+        document.getElementById('stop-lat').value = stop.coords[0] || '';
+        document.getElementById('stop-lon').value = stop.coords[1] || '';
+        
+        // Parse time start & end
+        const timeVal = stop.time || '';
+        if (timeVal.includes(' - ')) {
+            const parts = timeVal.split(' - ');
+            document.getElementById('stop-time-start').value = parts[0] || '';
+            document.getElementById('stop-time-end').value = parts[1] || '';
+        } else {
+            document.getElementById('stop-time-start').value = timeVal;
+            document.getElementById('stop-time-end').value = '';
+        }
+
+        // Set Emoji grid active class
+        document.querySelectorAll('.emoji-opt').forEach(btn => {
+            if (btn.dataset.emoji === stop.emoji) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Set Ulaşım Tipi (Type) grid active class
+        const standardTypes = ['walk', 'sea', 'metro', 'drive'];
+        document.querySelectorAll('.type-opt').forEach(btn => btn.classList.remove('active'));
+        const customTypeContainer = document.getElementById('custom-type-container');
+        
+        if (standardTypes.includes(stop.type)) {
+            const typeBtn = document.querySelector(`.type-opt[data-type="${stop.type}"]`);
+            if (typeBtn) typeBtn.classList.add('active');
+            if (customTypeContainer) customTypeContainer.style.display = 'none';
+        } else {
+            const customTrigger = document.getElementById('btn-custom-type-trigger');
+            if (customTrigger) customTrigger.classList.add('active');
+            if (customTypeContainer) {
+                customTypeContainer.style.display = 'block';
+                document.getElementById('stop-type-custom').value = stop.type || '';
+            }
+        }
+        
+        // Coordinates preview
+        const coordsPreview = document.getElementById('coords-preview');
+        if (coordsPreview) {
+            coordsPreview.innerHTML = `📍 Seçilen Koordinatlar: ${stop.coords[0].toFixed(5)}, ${stop.coords[1].toFixed(5)}`;
+            coordsPreview.style.display = 'block';
+        }
+        
+        // Show Delete Button
+        const deleteStopBtn = document.getElementById('btn-delete-stop');
+        if (deleteStopBtn) deleteStopBtn.style.display = 'flex';
+        
+        // Set tab title & submit button text for editing
+        const tabFormBtn = document.getElementById('tab-btn-form');
+        if (tabFormBtn) tabFormBtn.innerText = "Durağı Düzenle";
+        
+        const submitBtn = addForm.querySelector('.form-submit-btn');
+        if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Değişiklikleri Kaydet';
+        
+        // Ensure the Edit Form tab is active
+        if (tabFormBtn) tabFormBtn.click();
+        
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.remove('map-picking');
+        }
+    };
+
+    // Handle Delete Stop
+    const deleteStopBtn = document.getElementById('btn-delete-stop');
+    if (deleteStopBtn) {
+        deleteStopBtn.addEventListener('click', () => {
+            if (!editingStopId) return;
+            if (confirm("Bu durağı rotadan silmek istediğinize emin misiniz?")) {
+                console.log(`[DeleteStop] Deleting stopId: ${editingStopId}`);
+                itinerary = itinerary.filter(item => item.id !== editingStopId);
+                rebuildRouteUI();
+                if (modal) modal.style.display = 'none';
+                editingStopId = null;
+            }
         });
     }
 
@@ -751,40 +1083,327 @@ function registerControls() {
         });
     }
 
+    // --- MOBILE PICKER EVENTS ---
+    
+    // Emoji Option Selection
+    document.querySelectorAll('.emoji-opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.emoji-opt').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('stop-emoji').value = btn.dataset.emoji;
+        });
+    });
+
+    // Ulaşım Tipi (Type) Option Selection
+    const typeOpts = document.querySelectorAll('.type-opt');
+    const customTypeContainer = document.getElementById('custom-type-container');
+    const customTypeInput = document.getElementById('stop-type-custom');
+    const stopTypeHidden = document.getElementById('stop-type');
+
+    typeOpts.forEach(btn => {
+        btn.addEventListener('click', () => {
+            typeOpts.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            if (btn.id === 'btn-custom-type-trigger') {
+                if (customTypeContainer) {
+                    customTypeContainer.style.display = 'block';
+                    customTypeInput.focus();
+                    stopTypeHidden.value = customTypeInput.value || 'walk';
+                }
+            } else {
+                if (customTypeContainer) customTypeContainer.style.display = 'none';
+                stopTypeHidden.value = btn.dataset.type;
+            }
+        });
+    });
+
+    if (customTypeInput) {
+        customTypeInput.addEventListener('input', () => {
+            stopTypeHidden.value = customTypeInput.value || 'walk';
+        });
+    }
+
+    // Quick Budget Buttons
+    document.querySelectorAll('.quick-cost-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('stop-cost').value = btn.dataset.cost;
+        });
+    });
+
+    // Quick Task Checklist Helper
+    const quickTaskInput = document.getElementById('quick-task-input');
+    const addQuickTaskBtn = document.getElementById('btn-add-quick-task');
+    const stopNotesTextarea = document.getElementById('stop-notes');
+
+    const handleAddQuickTask = () => {
+        const taskText = quickTaskInput.value.trim();
+        if (!taskText) return;
+        
+        let currentNotes = stopNotesTextarea.value;
+        const taskLine = `- [ ] ${taskText}`;
+        
+        if (currentNotes && !currentNotes.endsWith('\n')) {
+            stopNotesTextarea.value = currentNotes + '\n' + taskLine;
+        } else {
+            stopNotesTextarea.value = currentNotes + taskLine;
+        }
+        
+        quickTaskInput.value = '';
+        quickTaskInput.focus();
+    };
+
+    if (addQuickTaskBtn) {
+        addQuickTaskBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleAddQuickTask();
+        });
+    }
+
+    if (quickTaskInput) {
+        quickTaskInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddQuickTask();
+            }
+        });
+    }
+
+    // --- COGEOGRAPHIC SEARCH BAR (PHOTON API) ---
+    const searchInput = document.getElementById('map-search-input');
+    const searchDropdown = document.getElementById('search-results-dropdown');
+    const clearSearchBtn = document.getElementById('btn-clear-search');
+    let searchDebounceTimer;
+
+    const clearSearch = () => {
+        if (searchInput) searchInput.value = '';
+        if (searchDropdown) {
+            searchDropdown.innerHTML = '';
+            searchDropdown.style.display = 'none';
+        }
+        if (clearSearchBtn) clearSearchBtn.style.display = 'none';
+    };
+
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', clearSearch);
+    }
+
+    if (searchInput && searchDropdown) {
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.trim();
+            if (clearSearchBtn) {
+                clearSearchBtn.style.display = query ? 'flex' : 'none';
+            }
+
+            if (!query) {
+                searchDropdown.innerHTML = '';
+                searchDropdown.style.display = 'none';
+                return;
+            }
+
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(async () => {
+                try {
+                    // Bias geocoding using map's current center to prioritize local results
+                    const center = (map && mapEnabled) ? map.getCenter() : { lat: 41.0082, lng: 28.9784 };
+                    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&lat=${center.lat}&lon=${center.lng}`);
+                    if (!response.ok) return;
+
+                    const results = await response.json();
+                    searchDropdown.innerHTML = '';
+
+                    if (!results || results.length === 0) {
+                        searchDropdown.innerHTML = `<div style="padding: 12px; color: var(--text-muted); font-size: 13px; text-align: center;">Sonuç bulunamadı</div>`;
+                        searchDropdown.style.display = 'block';
+                        return;
+                    }
+
+                    results.forEach(result => {
+                        const title = result.name || 'Bilinmeyen Mekan';
+                        const subtitle = result.display_name || 'Türkiye';
+
+                        const item = document.createElement('div');
+                        item.className = 'search-result-item';
+                        item.innerHTML = `
+                            <div class="search-result-title">${title}</div>
+                            <div class="search-result-subtitle" style="font-size: 11px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${subtitle}</div>
+                        `;
+
+                        item.addEventListener('click', () => {
+                            const lat = result.lat;
+                            const lon = result.lon;
+
+                            console.log(`[Search] Selected ${title} at coordinates: [${lat}, ${lon}]`);
+                            
+                            // Fly map to selected coordinates
+                            if (map) {
+                                map.flyTo([lat, lon], 16);
+                            }
+
+                            // Place temporary red marker
+                            clearTempMarker();
+                            if (map && mapEnabled) {
+                                const redIcon = L.divIcon({
+                                    className: 'custom-pin-marker red-pin',
+                                    html: '<div style="background-color: #ff4d4d; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>',
+                                    iconSize: [14, 14],
+                                    iconAnchor: [7, 7]
+                                });
+                                tempMarker = L.marker([lat, lon], { icon: redIcon }).addTo(map);
+                            }
+
+                            // Pre-fill form values
+                            document.getElementById('stop-lat').value = lat;
+                            document.getElementById('stop-lon').value = lon;
+                            document.getElementById('stop-location').value = title;
+                            
+                            const coordsPreview = document.getElementById('coords-preview');
+                            if (coordsPreview) {
+                                coordsPreview.innerHTML = `📍 Seçilen Konum: ${title} (${lat.toFixed(5)}, ${lon.toFixed(5)})`;
+                                coordsPreview.style.display = 'block';
+                            }
+
+                            // Close dropdown
+                            searchDropdown.style.display = 'none';
+                        });
+
+                        searchDropdown.appendChild(item);
+                    });
+
+                    searchDropdown.style.display = 'block';
+                } catch (err) {
+                    console.error("[Geocoding Error]", err);
+                }
+            }, 300);
+        });
+
+        // Close search results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+                searchDropdown.style.display = 'none';
+            }
+        });
+    }
+
     // Submit stop via form
     if (addForm) {
-        addForm.addEventListener('submit', (e) => {
+        addForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const nextId = itinerary.length > 0 ? Math.max(...itinerary.map(item => item.id)) + 1 : 1;
-            const newStop = {
-                id: nextId,
-                time: document.getElementById('stop-time').value,
-                title: document.getElementById('stop-title').value,
-                locationName: document.getElementById('stop-location').value,
-                desc: document.getElementById('stop-title').value + " durağında durulacak.",
-                cost: parseFloat(document.getElementById('stop-cost').value) || 0,
-                costLabel: (parseFloat(document.getElementById('stop-cost').value) || 0) + " TL",
-                emoji: document.getElementById('stop-emoji').value || "📍",
-                type: document.getElementById('stop-type').value,
-                coords: [
-                    parseFloat(document.getElementById('stop-lat').value),
-                    parseFloat(document.getElementById('stop-lon').value)
-                ],
-                type_to_next: "walk",
-                path_to_next: []
-            };
+            const submitBtn = addForm.querySelector('.form-submit-btn');
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yükleniyor...';
+            submitBtn.disabled = true;
 
-            itinerary.push(newStop);
-            rebuildRouteUI();
-            addForm.reset();
-            clearTempMarker();
-            const coordsPreview = document.getElementById('coords-preview');
-            if (coordsPreview) coordsPreview.style.display = 'none';
-            
-            // Switch view to show the newly added stop
-            selectItineraryItem(newStop.id, true);
-            alert("Durak başarıyla eklendi!");
+            try {
+                let imageUrl = null;
+                let existingImage = null;
+                if (editingStopId) {
+                    const existingStop = itinerary.find(s => s.id === editingStopId);
+                    if (existingStop) existingImage = existingStop.image;
+                }
+
+                const imageInput = document.getElementById('stop-image');
+                if (imageInput && imageInput.files.length > 0) {
+                    const file = imageInput.files[0];
+                    const reader = new FileReader();
+                    const base64Promise = new Promise((resolve, reject) => {
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                    const base64data = await base64Promise;
+                    
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image: base64data })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        imageUrl = data.url;
+                    }
+                } else if (editingStopId) {
+                    imageUrl = existingImage; // Keep the original image if no new file is uploaded
+                }
+
+                // Combine start/end times
+                const startTimeVal = document.getElementById('stop-time-start').value;
+                const endTimeVal = document.getElementById('stop-time-end').value;
+                const finalTimeStr = endTimeVal ? `${startTimeVal} - ${endTimeVal}` : startTimeVal;
+
+                // Handle Random Emoji Picker if no emoji is chosen
+                const randomEmojis = ['🚗', '✈️', '🚢', '🚇', '🏨', '🍽️', '☕', '🎡', '🏖️', '⛰️', '⛺', '🚶', '🛥️', '🛍️'];
+                const selectedEmoji = document.getElementById('stop-emoji').value;
+                const finalEmoji = (!selectedEmoji || selectedEmoji === '📍') ? randomEmojis[Math.floor(Math.random() * randomEmojis.length)] : selectedEmoji;
+
+                if (editingStopId) {
+                    const stop = itinerary.find(s => s.id === editingStopId);
+                    if (stop) {
+                        stop.time = finalTimeStr;
+                        stop.title = document.getElementById('stop-title').value;
+                        stop.locationName = document.getElementById('stop-location').value;
+                        stop.desc = document.getElementById('stop-title').value + " durağında durulacak.";
+                        stop.notes = document.getElementById('stop-notes') ? document.getElementById('stop-notes').value : "";
+                        stop.image = imageUrl;
+                        stop.cost = parseFloat(document.getElementById('stop-cost').value) || 0;
+                        stop.costLabel = (parseFloat(document.getElementById('stop-cost').value) || 0) + " TL";
+                        stop.emoji = finalEmoji;
+                        stop.type = document.getElementById('stop-type').value;
+                        stop.coords = [
+                            parseFloat(document.getElementById('stop-lat').value),
+                            parseFloat(document.getElementById('stop-lon').value)
+                        ];
+                    }
+                    rebuildRouteUI();
+                    addForm.reset();
+                    clearTempMarker();
+                    const coordsPreview = document.getElementById('coords-preview');
+                    if (coordsPreview) coordsPreview.style.display = 'none';
+                    
+                    modal.style.display = 'none';
+                    selectItineraryItem(editingStopId, true);
+                    alert("Durak başarıyla güncellendi!");
+                } else {
+                    const nextId = itinerary.length > 0 ? Math.max(...itinerary.map(item => item.id)) + 1 : 1;
+                    const newStop = {
+                        id: nextId,
+                        time: finalTimeStr,
+                        title: document.getElementById('stop-title').value,
+                        locationName: document.getElementById('stop-location').value,
+                        desc: document.getElementById('stop-title').value + " durağında durulacak.",
+                        notes: document.getElementById('stop-notes') ? document.getElementById('stop-notes').value : "",
+                        image: imageUrl,
+                        cost: parseFloat(document.getElementById('stop-cost').value) || 0,
+                        costLabel: (parseFloat(document.getElementById('stop-cost').value) || 0) + " TL",
+                        emoji: finalEmoji,
+                        type: document.getElementById('stop-type').value,
+                        coords: [
+                            parseFloat(document.getElementById('stop-lat').value),
+                            parseFloat(document.getElementById('stop-lon').value)
+                        ],
+                        type_to_next: "walk",
+                        path_to_next: []
+                    };
+
+                    itinerary.push(newStop);
+                    rebuildRouteUI();
+                    addForm.reset();
+                    clearTempMarker();
+                    const coordsPreview = document.getElementById('coords-preview');
+                    if (coordsPreview) coordsPreview.style.display = 'none';
+                    
+                    modal.style.display = 'none';
+                    selectItineraryItem(newStop.id, true);
+                    alert("Durak başarıyla eklendi!");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Bir hata oluştu.");
+            } finally {
+                submitBtn.innerHTML = originalBtnHtml;
+                submitBtn.disabled = false;
+            }
         });
     }
 
@@ -967,3 +1586,317 @@ function syncRouteWithAI() {
         syncBtn.innerHTML = originalHtml;
     });
 }
+
+// ==========================================
+// AUTH & MY ROUTES SYSTEM
+// ==========================================
+let sessionToken = localStorage.getItem('aegis_token') || null;
+let currentUser = localStorage.getItem('aegis_user') || null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnLoginModal = document.getElementById('btn-login-modal');
+    const authModal = document.getElementById('auth-modal');
+    const btnCloseAuth = document.getElementById('btn-close-auth');
+    const tabBtnLogin = document.getElementById('tab-btn-login');
+    const tabBtnRegister = document.getElementById('tab-btn-register');
+    const tabContentLogin = document.getElementById('tab-content-login');
+    const tabContentRegister = document.getElementById('tab-content-register');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const btnSaveRoute = document.getElementById('btn-save-route');
+    const btnMyRoutes = document.getElementById('btn-my-routes');
+    const myRoutesModal = document.getElementById('my-routes-modal');
+    const btnCloseRoutes = document.getElementById('btn-close-routes');
+    const routesListContainer = document.getElementById('routes-list-container');
+
+    // Update UI if logged in
+    function updateAuthUI() {
+        if (sessionToken && currentUser) {
+            btnLoginModal.innerHTML = `<i class="fa-solid fa-user-check"></i> ${currentUser} (Çıkış)`;
+            btnSaveRoute.style.display = 'block';
+            btnMyRoutes.style.display = 'block';
+        } else {
+            btnLoginModal.innerHTML = `<i class="fa-solid fa-user"></i> Giriş Yap / Kayıt Ol`;
+            btnSaveRoute.style.display = 'none';
+            btnMyRoutes.style.display = 'none';
+        }
+    }
+    updateAuthUI();
+
+    // Login Modal Toggle
+    btnLoginModal.addEventListener('click', () => {
+        if (sessionToken) {
+            if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
+                localStorage.removeItem('aegis_token');
+                localStorage.removeItem('aegis_user');
+                sessionToken = null;
+                currentUser = null;
+                updateAuthUI();
+            }
+        } else {
+            authModal.style.display = 'flex';
+        }
+    });
+    btnCloseAuth.addEventListener('click', () => authModal.style.display = 'none');
+    
+    // Auth Tabs
+    tabBtnLogin.addEventListener('click', () => {
+        tabBtnLogin.classList.add('active');
+        tabBtnRegister.classList.remove('active');
+        tabContentLogin.classList.add('active');
+        tabContentRegister.classList.remove('active');
+    });
+    tabBtnRegister.addEventListener('click', () => {
+        tabBtnRegister.classList.add('active');
+        tabBtnLogin.classList.remove('active');
+        tabContentRegister.classList.add('active');
+        tabContentLogin.classList.remove('active');
+    });
+
+    // API Calls
+    async function authFetch(url, payload) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'İşlem başarısız');
+        return data;
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            const data = await authFetch('/api/login', {
+                username: document.getElementById('login-username').value,
+                password: document.getElementById('login-password').value
+            });
+            sessionToken = data.token;
+            currentUser = data.username;
+            localStorage.setItem('aegis_token', sessionToken);
+            localStorage.setItem('aegis_user', currentUser);
+            updateAuthUI();
+            authModal.style.display = 'none';
+            alert(`Hoşgeldin ${currentUser}!`);
+        } catch (err) {
+            alert(err.message);
+        }
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            await authFetch('/api/register', {
+                username: document.getElementById('register-username').value,
+                password: document.getElementById('register-password').value
+            });
+            alert('Kayıt başarılı! Şimdi giriş yapabilirsiniz.');
+            tabBtnLogin.click(); // switch to login tab
+        } catch (err) {
+            alert(err.message);
+        }
+    });
+
+    // Share Route Button element
+    const btnShareRoute = document.getElementById('btn-share-route');
+
+    // Load shared route if token is in query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const shareToken = urlParams.get('share');
+    if (shareToken) {
+        console.log(`[ShareRoute] Found share token in URL: ${shareToken}. Fetching route data...`);
+        fetch(`/api/shared-route?token=${shareToken}`)
+            .then(res => {
+                console.log(`[ShareRoute] Fetch response status: ${res.status}`);
+                if (!res.ok) throw new Error("Paylaşılan rota yüklenemedi.");
+                return res.json();
+            })
+            .then(data => {
+                console.log(`[ShareRoute] Successfully loaded shared route data:`, data);
+                if (data.route_data) {
+                    loadRouteData(data.route_data);
+                    // Update header title to indicate shared route
+                    const subtitleEl = document.querySelector('.subtitle');
+                    if (subtitleEl) subtitleEl.innerText = `Ortak Rota: ${data.name}`;
+                    
+                    // Show share button so they can copy it again
+                    if (btnShareRoute) btnShareRoute.style.display = 'block';
+                    
+                    // Allow saving edits back to the shared route
+                    if (btnSaveRoute) {
+                        btnSaveRoute.style.display = 'block';
+                        btnSaveRoute.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Ortak Rotayı Güncelle';
+                    }
+                    
+                    alert(`"${data.name}" isimli ortak rotaya katıldınız! Yaptığınız değişiklikleri kaydederek güncelleyebilirsiniz.`);
+                }
+            })
+            .catch(err => {
+                console.error("[ShareRoute] Error fetching shared route:", err);
+                alert("Ortak rota yüklenirken bir hata oluştu: " + err.message);
+            });
+    }
+
+    // Save Route
+    if (btnSaveRoute) {
+        btnSaveRoute.addEventListener('click', async () => {
+            console.log(`[SaveRoute] Clicked. shareToken: ${shareToken}, currentRouteId: ${currentRouteId}, sessionToken: ${sessionToken}`);
+            
+            let payload = null;
+            let url = '/api/save-route';
+            const headers = { 'Content-Type': 'application/json' };
+            
+            if (shareToken) {
+                // Editing a shared route directly
+                payload = { share_token: shareToken, route_data: { config: appConfig, itinerary: itinerary } };
+                url = '/api/shared-route';
+            } else {
+                if (!sessionToken) {
+                    console.warn("[SaveRoute] Unauthorized save attempt. Opening Auth modal.");
+                    authModal.style.display = 'flex';
+                    return;
+                }
+                headers['Authorization'] = `Bearer ${sessionToken}`;
+                
+                let routeName = prompt("Kaydedilecek rotanın adını girin:", "Yeni Rotam");
+                if (!routeName) {
+                    console.log("[SaveRoute] Save cancelled by user (empty name).");
+                    return;
+                }
+                payload = { id: currentRouteId, name: routeName, route_data: { config: appConfig, itinerary: itinerary } };
+            }
+            
+            const originalText = btnSaveRoute.innerHTML;
+            btnSaveRoute.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kaydediliyor...';
+            btnSaveRoute.disabled = true;
+
+            try {
+                console.log(`[SaveRoute] Sending POST request to ${url} with payload:`, payload);
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                console.log(`[SaveRoute] Server response received:`, data);
+                if (!res.ok) throw new Error(data.error || 'Kaydetme başarısız.');
+                
+                alert(data.message || "Rota başarıyla kaydedildi!");
+                
+                if (data.route_id && !shareToken) {
+                    currentRouteId = data.route_id;
+                    console.log(`[SaveRoute] Set currentRouteId to: ${currentRouteId}`);
+                }
+                
+                if (data.share_token) {
+                    window.currentShareToken = data.share_token;
+                    console.log(`[SaveRoute] Received share_token: ${data.share_token}`);
+                    if (btnShareRoute) btnShareRoute.style.display = 'block';
+                }
+            } catch(err) {
+                console.error(`[SaveRoute] Exception caught:`, err);
+                alert("Kaydetme hatası: " + err.message);
+            } finally {
+                btnSaveRoute.innerHTML = originalText;
+                btnSaveRoute.disabled = false;
+            }
+        });
+    }
+
+    // Share Route Button Click Handler
+    if (btnShareRoute) {
+        btnShareRoute.addEventListener('click', () => {
+            const token = window.currentShareToken || shareToken;
+            console.log(`[ShareRoute] Share button clicked. Token: ${token}`);
+            if (!token) {
+                alert("Paylaşım linki oluşturulabilmesi için önce rotayı kaydetmelisiniz.");
+                return;
+            }
+            const inviteLink = `${window.location.origin}${window.location.pathname}?share=${token}`;
+            console.log(`[ShareRoute] Generated invite link: ${inviteLink}`);
+            
+            navigator.clipboard.writeText(inviteLink)
+                .then(() => {
+                    console.log("[ShareRoute] Copied invite link to clipboard successfully.");
+                    alert("Ortak planlama davet linki panoya kopyalandı! Arkadaşlarınıza gönderebilirsiniz:\n\n" + inviteLink);
+                })
+                .catch(err => {
+                    console.warn("[ShareRoute] Clipboard write failed, falling back to prompt.", err);
+                    prompt("Aşağıdaki davet linkini kopyalayıp arkadaşlarınıza gönderebilirsiniz:", inviteLink);
+                });
+        });
+    }
+
+    // My Routes Modal Trigger
+    if (btnMyRoutes) {
+        btnMyRoutes.addEventListener('click', async () => {
+            console.log(`[MyRoutes] Opening routes modal. sessionToken: ${sessionToken}`);
+            if (!sessionToken) return;
+            myRoutesModal.style.display = 'flex';
+            routesListContainer.innerHTML = '<p>Yükleniyor...</p>';
+            
+            try {
+                const res = await fetch('/api/my-routes', {
+                    headers: { 'Authorization': `Bearer ${sessionToken}` }
+                });
+                const routes = await res.json();
+                console.log(`[MyRoutes] Fetch routes response status: ${res.status}, count: ${routes.length}`);
+                if (!res.ok) throw new Error(routes.error || "Rotalar alınamadı.");
+                
+                routesListContainer.innerHTML = '';
+                if (routes.length === 0) {
+                    routesListContainer.innerHTML = '<p>Kayıtlı rotanız bulunmuyor.</p>';
+                    return;
+                }
+                
+                routes.forEach(route => {
+                    const routeItem = document.createElement('div');
+                    routeItem.className = 'route-list-item';
+                    routeItem.style.padding = '10px';
+                    routeItem.style.border = '1px solid var(--outline-variant)';
+                    routeItem.style.borderRadius = '8px';
+                    routeItem.style.display = 'flex';
+                    routeItem.style.justifyContent = 'space-between';
+                    routeItem.style.alignItems = 'center';
+                    routeItem.style.cursor = 'pointer';
+                    routeItem.style.marginBottom = '8px';
+                    routeItem.style.backgroundColor = 'var(--surface-container-highest)';
+                    
+                    routeItem.innerHTML = `
+                        <div>
+                            <strong>${route.name}</strong>
+                            <div style="font-size: 0.8rem; color: var(--on-surface-variant);">${route.created_at}</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    `;
+                    routeItem.addEventListener('click', () => {
+                        console.log(`[MyRoutes] Loading route ID: ${route.id}, name: ${route.name}`);
+                        loadRouteData(route.route_data);
+                        currentRouteId = route.id;
+                        
+                        // Show share button if share token is present on the route
+                        if (route.share_token) {
+                            window.currentShareToken = route.share_token;
+                            if (btnShareRoute) btnShareRoute.style.display = 'block';
+                        }
+                        
+                        myRoutesModal.style.display = 'none';
+                        alert(`"${route.name}" başarıyla yüklendi!`);
+                    });
+                    routesListContainer.appendChild(routeItem);
+                });
+            } catch(err) {
+                console.error(`[MyRoutes] Error loading routes list:`, err);
+                routesListContainer.innerHTML = `<p style="color: red;">${err.message}</p>`;
+            }
+        });
+    }
+
+    if (btnCloseRoutes) {
+        btnCloseRoutes.addEventListener('click', () => {
+            console.log("[MyRoutes] Closing routes modal.");
+            myRoutesModal.style.display = 'none';
+        });
+    }
+});
