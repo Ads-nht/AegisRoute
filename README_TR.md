@@ -8,76 +8,45 @@ AegisRoute; gezi, seyahat veya etkinlik rotalarınızı interaktif bir harita ü
 
 ## 🌟 Öne Çıkan Özellikler
 
-- **İnteraktif Dinamik Harita:** Leaflet.js altyapısı ve sade CartoDB Voyager harita katmanı kullanılmıştır. Rota haritası tüm durakları içine alacak şekilde otomatik odaklanır ve ölçeklenir.
-- **Dinamik Zaman Çizelgesi (Timeline):** Her durak için saatleri, emojileri, harcamaları ve açıklamaları gösteren kartlar üretir. Kartlara tıklamak haritayı o noktaya odaklar ve detay balonunu açar.
-- **Kişiselleştirilebilir Canlı Geri Sayım:** Tanımlanan bir hedef zamana (örneğin gün batımı, uçuş saati, etkinlik başlangıcı) kalan süreyi saniye saniye hesaplayan canlı geri sayım widget'ı.
+- **İnteraktif Dinamik Harita:** Leaflet.js altyapısı ve Google Maps yol katmanı kullanılmıştır. Rota haritası tüm durakları içine alacak şekilde otomatik odaklanır ve ölçeklenir.
+- **Dinamik Zaman Çizelgesi (Timeline) & Görev Listeleri:** Her durak için saatleri, harcamaları, Obsidian tarzı markdown görev listelerini (`- [ ] Yapılacaklar`) ve açıklamaları gösteren kartlar üretir. Kartlara çift tıklayarak durakları düzenleyebilirsiniz.
+- **Kişiselleştirilebilir Canlı Geri Sayım:** Tanımlanan bir hedef zamana (örneğin gün batımı, uçuş saati, etkinlik başlangıcı) kalan süreyi saniye saniye hesaplayan canlı geri sayım widget'ı. Rota boş olduğunda otomatik olarak `---` moduna geçer.
 - **Konsolide Bütçe Takipçisi:** Tüm duraklardaki maliyetleri otomatik toplayarak toplam bütçe bilgisini günceller.
 - **Google Haritalar Yol Tarifi Entegrasyonu:** Her rota kartı, koordinat parametrelerine göre Google Haritalar üzerinde otomatik yürüyüş veya toplu taşıma tarif linkleri oluşturur.
+- **Yardım Modalı:** Sol üst menüye entegre edilmiş Yardım butonu sayesinde, doğrudan `docs/KULLANIM.md` dosyasından beslenen kılavuzu arayüz üzerinde şık bir şekilde okuyabilirsiniz.
 - **Mobil Uyumlu Responsive Tasarım:** Telefonlarda harita ve liste görünümleri arasında akıcı geçiş sağlayan, yerel harita uygulaması deneyimi sunan mobil arayüz.
 
 ---
 
 ## 🏗️ Kendi Rotanızı Nasıl Tanımlarsınız?
 
-AegisRoute veri odaklıdır. Başlangıçta `route.json` dosyasını yüklemeye çalışır. Eğer `route.json` bulunamazsa (güvenlik nedeniyle git'e yüklenmediği için GitHub'da varsayılan olarak yoktur), uygulama **otomatik olarak** `route_template.json` dosyasını yükler.
-
-### 🛠️ İnteraktif Rota Editörü (UI)
-Rotalarınızı doğrudan web tarayıcısı üzerinden **Rota Editörü & JSON Yükleyici** panelini kullanarak yapılandırabilir ve düzenleyebilirsiniz:
+AegisRoute veri odaklıdır. Rotalarınızı doğrudan web tarayıcısı üzerinden **Rota Editörü & JSON Yükleyici** panelini kullanarak yapılandırabilir ve düzenleyebilirsiniz:
 1. Yan menüdeki **"Rotayı Düzenle / JSON Yükle"** butonuna tıklayın.
 2. **"Durak Ekle"** sekmesinde; durak adlarını, koordinatları (enlem/boylam), maliyeti, emojileri ve ulaşım tiplerini girerek durağı anında haritaya ekleyin. Yollar otomatik olarak yeniden çizilecektir.
 3. **"JSON Yapıştır / Yükle"** sekmesinde; hazır bir JSON rota şemasını yapıştırabilir veya bilgisayarınızdaki bir `.json` dosyasını seçip uygulayabilirsiniz.
-4. **"Rotayı İndir (route.json)"** butonuna tıklayarak oluşturduğunuz rotayı bilgisayarınıza indirin. Bu dosyayı projenin `src/` dizinine yerleştirerek sonraki seferlerde otomatik yüklenmesini sağlayın.
-
-> [!IMPORTANT]
-> **Git Koruması:** `route.json` dosyası, kişisel seyahat rotalarınızın yanlışlıkla GitHub'a commit edilmesini engellemek için `.gitignore` içine eklenmiştir. Özel rotalarınızı yerelinizde saklayabilir veya arayüz üzerinden indirip yükleyebilirsiniz.
-
-### Yapılandırma Şeması (`route_template.json` / `route.json`):
-```json
-{
-  "config": {
-    "title": "AegisRoute",
-    "subtitle": "Interactive Custom Route Planner",
-    "map_center": [41.0240, 28.9950],
-    "map_zoom": 13,
-    "countdown_label": "Hedef Zaman Başlığı",
-    "countdown_target": "20:38",
-    "countdown_hour": 20,
-    "countdown_minute": 38,
-    "footer_text": "AegisRoute ile harika rotalar planlayın. ❤️"
-  },
-  "itinerary": [
-    {
-      "id": 1,
-      "time": "13:15 - 13:25",
-      "title": "Durak Başlığı",
-      "locationName": "Mekan Adı",
-      "desc": "Durakta yapılacak aktivitelerin açıklaması.",
-      "cost": 50,
-      "costLabel": "~50 TL",
-      "emoji": "📍",
-      "type": "walk",
-      "coords": [41.02758, 29.01518],
-      "type_to_next": "walk",
-      "path_to_next": [
-        [41.02500, 29.01600]
-      ]
-    }
-  ]
-}
-```
-
-- **`coords`**: Durağın harita üzerindeki enlem ve boylam koordinatları.
-- **`path_to_next`**: İsteğe bağlı olarak, mevcut duraktan bir sonrakine giden yol çizgisinin (yolları, deniz hatlarını veya metroları takip edecek şekilde) kıvrımlarını belirleyen ara koordinat dizisi.
-- **`type_to_next`**: `walk` (yürüyüş), `sea` (deniz yolu), `metro` (metro), `drive` (araç) veya `none`. Bir sonraki durağa çizilecek çizginin rengini ve stilini belirler.
+4. **"Rotayı İndir (route.json)"** butonuna tıklayarak oluşturduğunuz rotayı bilgisayarınıza indirin.
 
 ---
 
 ## 🚀 Çalıştırma ve Kurulum
 
-### Yerel Çalıştırma
-1. Terminalden proje dizinine gidin:
+### 1. Docker ile Kurulum (Önerilen)
+
+Projeyi bilgisayarınızda veya sunucunuzda Docker kullanarak tek bir komutla ayağa kaldırabilirsiniz. `docker-compose.yml` dosyası, uygulamanın çalışması için gerekli tüm hacimleri ve çevre değişkenlerini barındırır.
+
+```bash
+# Projeyi başlatın (Varsayılan olarak 8888 portunda çalışır)
+docker compose up -d
+```
+
+Uygulamayı tarayıcınızda açın:
+- [http://localhost:8888](http://localhost:8888)
+
+### 2. Yerel Çalıştırma (Python)
+
+1. Gerekli bağımlılıkları yükleyin:
    ```bash
-   cd AegisRoute
+   pip install -r requirements.txt
    ```
 2. Python yerel sunucusunu başlatın:
    ```bash
