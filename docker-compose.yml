@@ -5,7 +5,9 @@ services:
     ports:
       - "8888:8080"
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data          # DB + uploads (kalıcı veri)
+      - ./src:/app/src            # Kaynak dosyalar (canlı güncelleme)
+      - ./docs:/app/docs          # Yardım kılavuzu (KULLANIM.md)
     environment:
       - AEGIS_DB_PATH=/app/data/aegis.db
       - AEGIS_UPLOAD_DIR=/app/data/uploads
@@ -15,3 +17,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    labels:
+      - "com.portainer.name=AegisRoute"
+      - "com.portainer.description=İnteraktif Rota ve Gezi Planlayıcı"
+      - "traefik.enable=false"
