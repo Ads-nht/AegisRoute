@@ -1437,6 +1437,9 @@ function registerControls() {
                 const selectedEmoji = document.getElementById('stop-emoji').value;
                 const finalEmoji = (!selectedEmoji || selectedEmoji === '📍') ? randomEmojis[Math.floor(Math.random() * randomEmojis.length)] : selectedEmoji;
 
+                let rawCost = parseFloat(document.getElementById('stop-cost').value);
+                if (isNaN(rawCost)) rawCost = 0;
+
                 if (editingStopId) {
                     const stop = itinerary.find(s => s.id === editingStopId);
                     if (stop) {
@@ -1446,8 +1449,8 @@ function registerControls() {
                         stop.desc = document.getElementById('stop-title').value + " durağında durulacak.";
                         stop.notes = document.getElementById('stop-notes') ? document.getElementById('stop-notes').value : "";
                         stop.image = imageUrl;
-                        stop.cost = parseFloat(document.getElementById('stop-cost').value) || 0;
-                        stop.costLabel = (parseFloat(document.getElementById('stop-cost').value) || 0) + " TL";
+                        stop.cost = rawCost;
+                        stop.costLabel = rawCost + " TL";
                         stop.emoji = finalEmoji;
                         stop.type = document.getElementById('stop-type').value;
                         stop.coords = [
@@ -1474,8 +1477,8 @@ function registerControls() {
                         desc: document.getElementById('stop-title').value + " durağında durulacak.",
                         notes: document.getElementById('stop-notes') ? document.getElementById('stop-notes').value : "",
                         image: imageUrl,
-                        cost: parseFloat(document.getElementById('stop-cost').value) || 0,
-                        costLabel: (parseFloat(document.getElementById('stop-cost').value) || 0) + " TL",
+                        cost: rawCost,
+                        costLabel: rawCost + " TL",
                         emoji: finalEmoji,
                         type: document.getElementById('stop-type').value,
                         coords: [
