@@ -1376,11 +1376,26 @@ function registerControls() {
             e.preventDefault();
             
             const submitBtn = addForm.querySelector('.form-submit-btn');
-            const originalBtnHtml = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yükleniyor...';
-            submitBtn.disabled = true;
+            const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Yükleniyor...';
+                submitBtn.disabled = true;
+            }
 
             try {
+                // Verify latitude and longitude inputs are selected and valid numbers
+                const latVal = parseFloat(document.getElementById('stop-lat').value);
+                const lonVal = parseFloat(document.getElementById('stop-lon').value);
+                
+                if (isNaN(latVal) || isNaN(lonVal)) {
+                    alert("Lütfen durak için haritadan veya aramadan geçerli bir konum seçin.");
+                    if (submitBtn) {
+                        submitBtn.innerHTML = originalBtnHtml;
+                        submitBtn.disabled = false;
+                    }
+                    return;
+                }
+
                 let imageUrl = null;
                 let existingImage = null;
                 if (editingStopId) {
