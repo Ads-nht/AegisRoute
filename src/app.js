@@ -506,6 +506,7 @@ function renderTimeline() {
     container.innerHTML = '';
     
     if (itinerary.length === 0) {
+        container.classList.add('is-empty');
         container.innerHTML = `
             <div class="empty-state-card" style="
                 padding: 32px 24px;
@@ -522,7 +523,7 @@ function renderTimeline() {
                     ilk durağını ekle. Rotanı istediğin zaman kaydet ve paylaş.
                 </p>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <button onclick="document.getElementById('search-input') && document.getElementById('search-input').focus()" style="
+                    <button onclick="document.getElementById('map-search-input') && document.getElementById('map-search-input').focus()" style="
                         background: var(--primary-teal);
                         color: #fff;
                         border: none;
@@ -561,6 +562,8 @@ function renderTimeline() {
         `;
         return;
     }
+    
+    container.classList.remove('is-empty');
     
     itinerary.forEach(item => {
         const card = document.createElement('div');

@@ -234,6 +234,13 @@ body {
     );
     opacity: 0.45; /* Increased opacity from 0.2 to 0.45 for better visibility */
     z-index: 1;
+    transition: opacity 0.2s ease;
+}
+
+/* Hide vertical connector line when route is empty */
+.timeline-container.is-empty::before {
+    opacity: 0 !important;
+    display: none !important;
 }
 
 /* Timeline Card */
@@ -1013,14 +1020,17 @@ body {
     border: 1px solid rgba(233, 196, 106, 0.3);
     border-radius: 8px;
     color: var(--highlight-gold);
-    font-size: 13px;
+    font-size: 12px; /* Slightly smaller base font-size to prevent wrap */
     font-weight: 600;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     transition: var(--transition-smooth);
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .edit-route-btn:hover {
