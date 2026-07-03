@@ -474,15 +474,29 @@ function startSunsetCountdown() {
         timerElement.innerText = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
     }
     
+    // If route has no stops, do not start active countdown, just show '---'
+    if (itinerary.length === 0) {
+        timerElement.innerText = "---";
+        timerElement.style.color = "";
+        return;
+    }
+
     updateCountdown();
     countdownInterval = setInterval(updateCountdown, 1000);
 }
 
 // 7. Calculate and display budget total
 function calculateTotalBudget() {
-    const total = itinerary.reduce((sum, item) => sum + item.cost, 0);
     const budgetEl = document.getElementById('total-budget');
-    if (budgetEl) budgetEl.innerText = `${total} TL`;
+    if (!budgetEl) return;
+    
+    if (itinerary.length === 0) {
+        budgetEl.innerText = "---";
+        return;
+    }
+    
+    const total = itinerary.reduce((sum, item) => sum + item.cost, 0);
+    budgetEl.innerText = `${total} TL`;
 }
 
 // 8. Render Timeline Cards in the Sidebar
@@ -677,15 +691,52 @@ function renderTimeline() {
             <p>Rotanıza yeni bir durak veya harita checkpoint'i eklemek için tıklayın.</p>
         </div>
     `;
-    addCard.addEventListener('click', () => {
-        const modal = document.getElementById('route-editor-modal');
-        if (modal) {
-            modal.style.display = 'flex';
-            const currentData = { config: appConfig, itinerary: itinerary };
-            const jsonInput = document.getElementById('json-input');
-            if (jsonInput) jsonInput.value = JSON.stringify(currentData, null, 2);
-        }
-    });
+        addCard.addEventListener('click', () => {
+            const modal = document.getElementById('route-editor-modal');
+            if (modal) {
+                // Reset editing state to ensure a new stop is added, not updating an old one!
+                editingStopId = null;
+                const addForm = document.getElementById('add-stop-form');
+                if (addForm) {
+                    addForm.reset();
+                    const submitBtn = addForm.querySelector('.form-submit-btn');
+                    if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Rotaya Ekle';
+                    
+                    const tabFormBtn = document.getElementById('tab-btn-form');
+                    if (tabFormBtn) {
+                        tabFormBtn.innerText = "Durak Ekle";
+                        tabFormBtn.click(); // Ensure form tab is active
+                    }
+                    
+                    // Reset emoji active class to default
+                    document.querySelectorAll('.emoji-opt').forEach(btn => btn.classList.remove('active'));
+                    const defaultEmojiBtn = document.querySelector('.emoji-opt[data-emoji="📍"]');
+                    if (defaultEmojiBtn) defaultEmojiBtn.classList.add('active');
+                    document.getElementById('stop-emoji').value = '📍';
+
+                    // Reset type active class to default
+                    document.querySelectorAll('.type-opt').forEach(btn => btn.classList.remove('active'));
+                    const defaultTypeBtn = document.querySelector('.type-opt[data-type="walk"]');
+                    if (defaultTypeBtn) defaultTypeBtn.classList.add('active');
+                    document.getElementById('stop-type').value = 'walk';
+                    const customTypeContainer = document.getElementById('custom-type-container');
+                    if (customTypeContainer) customTypeContainer.style.display = 'none';
+
+                    const coordsPreview = document.getElementById('coords-preview');
+                    if (coordsPreview) coordsPreview.style.display = 'none';
+
+                    const deleteStopBtn = document.getElementById('btn-delete-stop');
+                    if (deleteStopBtn) deleteStopBtn.style.display = 'none';
+                }
+
+                modal.style.display = 'flex';
+                modal.classList.remove('map-picking');
+                
+                const currentData = { config: appConfig, itinerary: itinerary };
+                const jsonInput = document.getElementById('json-input');
+                if (jsonInput) jsonInput.value = JSON.stringify(currentData, null, 2);
+            }
+        });
     container.appendChild(addCard);
 }
 
@@ -1607,15 +1658,19 @@ function registerControls() {
 function renderHelpMarkdown(md) {
     const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-    // Code blocks
-    md = md.replace(/```(\w*)\n([\s\S]*?)```/gm, (_, lang, code) =>
-        `<pre style="background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px;overflow-x:auto;font-size:13px;line-height:1.6;margin:16px 0;"><code>${esc(code.trim())}</code></pre>`);
+    // 1. Extract code blocks and store them to avoid formatting conflicts inside code blocks
+    const codeBlocks = [];
+    md = md.replace(/```(\w*)\n([\s\S]*?)```/gm, (_, lang, code) => {
+        const placeholder = `%%CODEBLOCK_${codeBlocks.length}%%`;
+        codeBlocks.push(`<pre style="background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px;overflow-x:auto;font-size:13px;line-height:1.6;margin:16px 0;font-family:monospace;white-space:pre-wrap;"><code>${esc(code.trim())}</code></pre>`);
+        return placeholder;
+    });
 
-    // Inline code
+    // 2. Inline code
     md = md.replace(/`([^`]+)`/g, (_, c) =>
-        `<code style="background:rgba(42,157,143,0.15);color:var(--primary-teal);padding:2px 7px;border-radius:5px;font-size:13px;">${esc(c)}</code>`);
+        `<code style="background:rgba(42,157,143,0.15);color:var(--primary-teal);padding:2px 7px;border-radius:5px;font-size:13px;font-family:monospace;">${esc(c)}</code>`);
 
-    // Headings
+    // 3. Headings
     md = md.replace(/^### (.+)$/gm, (_, t) =>
         `<h3 style="font-size:15px;font-weight:700;color:var(--primary-teal);margin:24px 0 10px;display:flex;align-items:center;gap:8px;"><span style="display:inline-block;width:4px;height:16px;background:var(--primary-teal);border-radius:2px;flex-shrink:0;"></span>${t}</h3>`);
     md = md.replace(/^## (.+)$/gm, (_, t) =>
@@ -1623,17 +1678,17 @@ function renderHelpMarkdown(md) {
     md = md.replace(/^# (.+)$/gm, (_, t) =>
         `<h1 style="font-size:22px;font-weight:800;color:var(--text-light);margin:0 0 20px;padding:20px;background:rgba(42,157,143,0.08);border-radius:12px;border-left:4px solid var(--primary-teal);">${t}</h1>`);
 
-    // Horizontal rule
+    // 4. Horizontal rule
     md = md.replace(/^---$/gm, '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:24px 0;">');
 
-    // Blockquote
+    // 5. Blockquote
     md = md.replace(/^> (.+)$/gm, (_, t) =>
         `<blockquote style="border-left:3px solid var(--primary-teal);margin:12px 0;padding:10px 16px;background:rgba(42,157,143,0.06);border-radius:0 8px 8px 0;color:var(--text-muted);font-style:italic;">${t}</blockquote>`);
 
-    // Bold
+    // 6. Bold
     md = md.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-light);">$1</strong>');
 
-    // Tables
+    // 7. Tables
     md = md.replace(/(\|.+\|\n)(\|[-| :]+\|\n)((\|.+\|\n?)*)/gm, (match) => {
         const rows = match.trim().split('\n').filter(r => r.trim());
         const makeCell = (r, tag) => r.replace(/^\||\|$/g,'').split('|')
@@ -1643,21 +1698,28 @@ function renderHelpMarkdown(md) {
         return `<div style="overflow-x:auto;margin:16px 0;"><table style="width:100%;border-collapse:collapse;font-size:13px;">${header}${body}</table></div>`;
     });
 
-    // Checkboxes
+    // 8. Checkboxes
     md = md.replace(/^- \[x\] (.+)$/gm, (_, t) =>
         `<li style="margin:5px 0 5px 8px;color:var(--text-muted);list-style:none;display:flex;align-items:center;gap:8px;"><span style="color:#2a9d8f;">✅</span><span style="text-decoration:line-through;opacity:0.6;">${t}</span></li>`);
     md = md.replace(/^- \[ \] (.+)$/gm, (_, t) =>
         `<li style="margin:5px 0 5px 8px;color:var(--text-muted);list-style:none;display:flex;align-items:center;gap:8px;"><span>⬜</span>${t}</li>`);
 
-    // Lists
-    md = md.replace(/^(\d+)\. (.+)$/gm, (_, n, t) =>
+    // 9. Lists (Ensure codeblock placeholders aren't broken by lists)
+    md = md.replace(/^(\d+)\. (?!%%CODEBLOCK_)(.+)$/gm, (_, n, t) =>
         `<li style="margin:6px 0 6px 20px;color:var(--text-muted);line-height:1.6;list-style-type:decimal;">${t}</li>`);
-    md = md.replace(/^- (.+)$/gm, (_, t) =>
+    md = md.replace(/^- (?!\[[ x]\])(?!%%CODEBLOCK_)(.+)$/gm, (_, t) =>
         `<li style="margin:6px 0 6px 20px;color:var(--text-muted);line-height:1.6;list-style-type:disc;">${t}</li>`);
 
-    // Paragraphs
-    md = md.replace(/^(?!<[a-zA-Z\/])(.+)$/gm, (_, t) =>
-        `<p style="margin:8px 0;color:var(--text-muted);line-height:1.75;font-size:14px;">${t}</p>`);
+    // 10. Paragraphs (Ignore headings, tags, lists, blockquotes and placeholders)
+    md = md.replace(/^(?!<[a-zA-Z\/])(?!- )(?!\d+\. )(?!> )(?!%%CODEBLOCK_)(.+)$/gm, (_, t) => {
+        if (!t.trim()) return '';
+        return `<p style="margin:8px 0;color:var(--text-muted);line-height:1.75;font-size:14px;">${t}</p>`;
+    });
+
+    // 11. Re-insert original code blocks
+    codeBlocks.forEach((block, index) => {
+        md = md.replace(`%%CODEBLOCK_${index}%%`, block);
+    });
 
     return `<div style="font-family:inherit;">${md}</div>`;
 }
