@@ -128,44 +128,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (appContainer) appContainer.classList.add('show-timeline');
     }
 
-    // Try loading route.json. If it fails, fall back to route_template.json.
+    // Try loading route.json. If it fails, fall back to empty state.
     fetch('route.json')
         .then(response => {
-            if (!response.ok) {
-                throw new Error("route.json not found, loading template...");
-            }
+            if (!response.ok) throw new Error("route.json not found");
             return response.json();
         })
-        .catch(() => {
-            // Fallback to route_template.json
-            return fetch('route_template.json')
-                .then(res => res.json());
-        })
+        .catch(() => ({
+            config: {
+                title: "AegisRoute",
+                subtitle: "İnteraktif Rota ve Gezi Planlayıcı",
+                map_center: [41.0240, 28.9950],
+                map_zoom: 13,
+                countdown_label: "Hedef Zaman",
+                countdown_target: "20:00",
+                countdown_hour: 20,
+                countdown_minute: 0,
+                footer_text: "AegisRoute ile kendi rotanı planla. ❤️"
+            },
+            itinerary: []
+        }))
         .then(data => {
             loadRouteData(data);
         })
         .catch(err => {
-            console.error("Failed to load both route.json and route_template.json:", err);
-            const warning = document.getElementById('offline-warning-banner');
-            if (warning) {
-                warning.querySelector('span').innerText = "Rota verileri yüklenemedi. Rota editörünü kullanarak yeni bir rota oluşturabilirsiniz.";
-                warning.style.display = 'flex';
-            }
-            // Initialize empty app modules
-            loadRouteData({
-                config: {
-                    title: "AegisRoute",
-                    subtitle: "İnteraktif Rota Planlayıcı",
-                    map_center: [41.0240, 28.9950],
-                    map_zoom: 13,
-                    countdown_label: "Hedef Zaman",
-                    countdown_target: "20:00",
-                    countdown_hour: 20,
-                    countdown_minute: 0,
-                    footer_text: "AegisRoute ile kendi rotanızı planlayın."
-                },
-                itinerary: []
-            });
+            console.error("Failed to load route data:", err);
         })
         .finally(() => {
             registerControls();
@@ -506,9 +493,56 @@ function renderTimeline() {
     
     if (itinerary.length === 0) {
         container.innerHTML = `
-            <div class="empty-timeline-info" style="padding: 30px; text-align: center; color: var(--text-muted);">
-                <i class="fa-solid fa-map-pin" style="font-size: 28px; margin-bottom: 12px; display: block; color: var(--primary-teal);"></i>
-                <p>Henüz durak eklenmemiş. Rota Editörünü kullanarak hemen bir durak ekleyin!</p>
+            <div class="empty-state-card" style="
+                padding: 32px 24px;
+                text-align: center;
+                background: rgba(42,157,143,0.06);
+                border: 1px dashed rgba(42,157,143,0.3);
+                border-radius: 16px;
+                margin: 12px 0;
+            ">
+                <div style="font-size: 48px; margin-bottom: 16px; display: block;">🗺️</div>
+                <h2 style="color: var(--text-light); font-size: 18px; margin: 0 0 10px 0; font-weight: 700;">Rotanı oluşturmaya başla!</h2>
+                <p style="color: var(--text-muted); font-size: 13px; line-height: 1.7; margin: 0 0 24px 0;">
+                    Haritaya bir yeri işaretle veya arama barını kullanarak<br>
+                    ilk durağını ekle. Rotanı istediğin zaman kaydet ve paylaş.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button onclick="document.getElementById('search-input') && document.getElementById('search-input').focus()" style="
+                        background: var(--primary-teal);
+                        color: #fff;
+                        border: none;
+                        border-radius: 10px;
+                        padding: 12px 20px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        transition: all 0.2s;
+                    ">
+                        <i class="fa-solid fa-magnifying-glass-location"></i> Yer Ara
+                    </button>
+                    <button onclick="document.getElementById('btn-open-editor') && document.getElementById('btn-open-editor').click()" style="
+                        background: rgba(255,255,255,0.05);
+                        color: var(--text-muted);
+                        border: 1px solid rgba(255,255,255,0.12);
+                        border-radius: 10px;
+                        padding: 12px 20px;
+                        font-size: 13px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        transition: all 0.2s;
+                    ">
+                        <i class="fa-solid fa-file-import"></i> JSON ile İçe Aktar
+                    </button>
+                </div>
             </div>
         `;
         return;

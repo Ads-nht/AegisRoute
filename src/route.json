@@ -1,0 +1,14 @@
+{
+  "config": {
+    "title": "AegisRoute",
+    "subtitle": "İnteraktif Rota ve Gezi Planlayıcı",
+    "map_center": [41.0240, 28.9950],
+    "map_zoom": 13,
+    "countdown_label": "Hedef Zaman",
+    "countdown_target": "20:00",
+    "countdown_hour": 20,
+    "countdown_minute": 0,
+    "footer_text": "AegisRoute ile kendi rotanı planla. ❤️"
+  },
+  "itinerary": []
+}

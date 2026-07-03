@@ -16,9 +16,7 @@ __pycache__/
 *.swo
 
 # Project dynamic data (Ignored to protect personal routes)
-route.json
-src/route.json
-src/route_default.json
+# Note: route.json is now committed as an empty template (no personal data)
 
 # Database & uploads (personal data, Docker volume)
 src/aegis.db
