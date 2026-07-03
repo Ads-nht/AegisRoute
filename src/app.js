@@ -1825,11 +1825,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update UI if logged in
     function updateAuthUI() {
         if (sessionToken && currentUser) {
-            btnLoginModal.innerHTML = `<i class="fa-solid fa-user-check"></i> ${currentUser} (Çıkış)`;
+            btnLoginModal.innerHTML = `<i class="fa-solid fa-user-check" style="flex-shrink:0;"></i><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;">${currentUser} (Çıkış)</span>`;
             btnSaveRoute.style.display = 'block';
             btnMyRoutes.style.display = 'block';
         } else {
-            btnLoginModal.innerHTML = `<i class="fa-solid fa-user"></i> Giriş Yap / Kayıt Ol`;
+            btnLoginModal.innerHTML = `<i class="fa-solid fa-user" style="flex-shrink:0;"></i><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;">Giriş Yap</span>`;
             btnSaveRoute.style.display = 'none';
             btnMyRoutes.style.display = 'none';
         }

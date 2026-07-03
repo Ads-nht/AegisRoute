@@ -1014,13 +1014,15 @@ body {
    ============================================================================== */
 .edit-route-btn {
     width: 100%;
+    max-width: 100%; /* Prevent expanding beyond grid column */
+    min-width: 0;    /* Enable flex/grid container shrinking */
     margin-top: 12px;
     padding: 10px 14px;
     background: rgba(233, 196, 106, 0.15);
     border: 1px solid rgba(233, 196, 106, 0.3);
     border-radius: 8px;
     color: var(--highlight-gold);
-    font-size: 12px; /* Slightly smaller base font-size to prevent wrap */
+    font-size: 11px; /* Slightly smaller to fit layout comfortably */
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
