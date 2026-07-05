@@ -1,62 +1,88 @@
-# 🗺️ AegisRoute - Interactive Custom Route & Itinerary Planner
+# AegisRoute — Interactive Route & Itinerary Planner
 
-[English](README.md) | [Türkçe](README_TR.md)
+[English](README.md) | [Türkçe](README.tr.md)
 
-AegisRoute is a modern, high-performance, single-page web application designed to map, trace, and schedule custom travel routes and itineraries on an interactive map. It dynamically reads route checkpoints, budgets, and coordinates from a simple configuration file (`route.json`), making it instantly customizable for any city or trip.
-
----
-
-## 🌟 Key Features
-
-- **Interactive Dynamic Mapping:** Built with Leaflet.js and Google Maps roadmap tiles. Automatically centers, zooms, and fits coordinates to display the entire route.
-- **Dynamic Timeline Schedule & Task Checklists:** Renders cards for each stop dynamically showing times, costs, Obsidian-style markdown checklist items (`- [ ] Tasks`), and descriptions. Double-clicking timeline cards triggers instant editing.
-- **Custom Event Countdown:** Live countdown widget showing the remaining hours, minutes, and seconds to a configured target time (e.g., sunset, flight time, check-in, or event start). Automatically falls back to `---` when the route is empty.
-- **Consolidated Budget Tracker:** Dynamically aggregates costs from all stops and displays the total budget instantly.
-- **Google Maps Direction Helper:** Each card automatically generates direct Google Maps walking or transit direction URLs based on coordinate parameters.
-- **Help Center Modal:** Clean Help button integrated into the sidebar menu, rendering the Turkish usage guide dynamically from `docs/KULLANIM.md` directly in the UI.
-- **Responsive Mobile Layout:** Optimizes layout dynamically for mobile devices, offering tab switches between map and list views similar to native navigation apps.
+AegisRoute is a single-page web application for planning, visualizing, and sharing travel routes on an interactive map. Stops, budgets, transport legs, and checklists are driven by a JSON schema (`route.json`) and can be edited in the browser or persisted per user in SQLite.
 
 ---
 
-## 🏗️ How to Configure Your Custom Route
+## Key Features
 
-You can configure, edit, or create new routes directly in the web browser using the **Route Editor & JSON Loader** modal:
-1. Click the **"Rotayı Düzenle / JSON Yükle"** button in the sidebar.
-2. Under the **"Durak Ekle"** tab, fill in the form with stop names, coordinates (latitude/longitude), cost, emojis, and transport types. It will immediately add the checkpoint and redraw the map paths.
-3. Under the **"JSON Yapıştır / Yükle"** tab, you can paste a complete JSON configuration or choose a local `.json` file to apply it.
-4. Click **"Rotayı İndir (route.json)"** to export your configured itinerary as a `route.json` file.
+- **Interactive map** — Leaflet.js with CartoDB Voyager tiles; auto-fit bounds, layered polylines (walk, sea, metro, drive), and stop markers
+- **Timeline & checklists** — Per-stop cards with times, costs, descriptions, and Obsidian-style markdown tasks (`- [ ]` / `- [x]`)
+- **Live countdown** — Configurable target time widget (sunset, event start, etc.) with safe fallbacks
+- **Budget tracker** — Aggregates stop costs into a running total
+- **Route editor** — Add stops, paste/load JSON, export `route.json`, and search places (Google Maps POI with Nominatim fallback)
+- **User accounts** — Register/login, save multiple routes, share read-only links via share tokens
+- **Resilience** — Offline map fallback keeps the timeline usable; auto port scan if 8080 is busy
+- **Security** — PBKDF2 password hashing, rate limiting, CSRF checks, path traversal protection, magic-byte image validation
 
 ---
 
-## 🚀 Execution & Deployment
+## Architecture
 
-### 1. Docker Setup (Recommended)
+| Layer | Stack |
+|-------|-------|
+| Frontend | HTML, CSS, JavaScript, Leaflet.js, Font Awesome |
+| Backend | Python 3 stdlib (`http.server`), SQLite |
+| Deployment | Docker Compose (recommended) or local Python |
 
-Run the application inside a container using docker-compose. All source files and docs are bind-mounted for live-reload without rebuilding.
+```
+src/
+├── server.py      # REST API + static file server
+├── app.js         # Map, timeline, editor UI
+├── index.html
+├── style.css
+└── route.json     # Default route template
+```
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/register`, `/api/login` | User authentication |
+| GET | `/api/my-routes` | List saved routes (Bearer token) |
+| POST | `/api/save-route` | Create or update a route |
+| GET | `/api/shared-route?token=` | Load a shared route |
+| GET | `/api/search?q=` | Place search |
+| POST | `/api/upload` | Image upload (PNG/JPEG/WebP) |
+
+---
+
+## Quick Start
+
+### Docker (recommended)
 
 ```bash
-# Start the container (accessible on port 8888 by default)
 docker compose up -d
 ```
 
-Open your browser and navigate to:
-- [http://localhost:8888](http://localhost:8888)
+Open [http://localhost:8888](http://localhost:8888)
 
-### 2. Local Run (Python)
+Persistent data (database + uploads) is stored in `./data/`.
 
-1. Install requirements:
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. Start the local server:
-   ```bash
-   python src/server.py
-   ```
-3. Open your browser and navigate to:
-   - [http://localhost:8080](http://localhost:8080)
+### Local Python
+
+```bash
+pip install -r requirements.txt
+python src/server.py
+```
+
+Open [http://localhost:8080](http://localhost:8080) (auto-increments if the port is taken).
 
 ---
 
-## 📄 License
+## Configuration
 
-This project is licensed under the MIT License.
+Edit stops and legs in the UI, or modify `src/route.json` directly. Environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AEGIS_DB_PATH` | `src/aegis.db` | SQLite database path |
+| `AEGIS_UPLOAD_DIR` | `src/uploads` | Uploaded image directory |
+
+---
+
+## License
+
+MIT License
