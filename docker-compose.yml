@@ -3,7 +3,7 @@ services:
     build: .
     container_name: aegisroute_app
     ports:
-      - "8888:8080"
+      - "127.0.0.1:8888:8080"
     volumes:
       - ./data:/app/data          # DB + uploads (kalıcı veri)
       - ./src:/app/src            # Kaynak dosyalar (canlı güncelleme)
@@ -11,6 +11,7 @@ services:
     environment:
       - AEGIS_DB_PATH=/app/data/aegis.db
       - AEGIS_UPLOAD_DIR=/app/data/uploads
+      - LISTEN_HOST=0.0.0.0
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/')"]

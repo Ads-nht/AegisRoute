@@ -1419,7 +1419,10 @@ function registerControls() {
                     
                     const response = await fetch('/api/upload', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {})
+                        },
                         body: JSON.stringify({ image: base64data })
                     });
                     if (response.ok) {
@@ -1942,7 +1945,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         btnSaveRoute.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Ortak Rotayı Güncelle';
                     }
                     
-                    alert(`"${data.name}" isimli ortak rotaya katıldınız! Yaptığınız değişiklikleri kaydederek güncelleyebilirsiniz.`);
+                    alert(`"${data.name}" isimli paylaşılan rota yüklendi. Bu bağlantı salt okunurdur; düzenlemek için giriş yapıp kendi rotanız olarak kaydedin.`);
                 }
             })
             .catch(err => {
@@ -1961,9 +1964,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const headers = { 'Content-Type': 'application/json' };
             
             if (shareToken) {
-                // Editing a shared route directly
-                payload = { share_token: shareToken, route_data: { config: appConfig, itinerary: itinerary } };
-                url = '/api/shared-route';
+                alert('Paylaşılan rotalar salt okunurdur. Değişiklikleri kaydetmek için giriş yapıp kendi rotanız olarak kaydedin.');
+                if (!sessionToken) {
+                    authModal.style.display = 'flex';
+                }
+                return;
             } else {
                 if (!sessionToken) {
                     console.warn("[SaveRoute] Unauthorized save attempt. Opening Auth modal.");

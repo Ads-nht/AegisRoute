@@ -50,7 +50,9 @@ class ThreadPoolTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         self.executor.submit(self.process_request_thread, request, client_address)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PORT = 8080
+PORT = int(os.getenv('AEGIS_PORT', '8080'))
+LISTEN_HOST = os.getenv('LISTEN_HOST', '127.0.0.1')
+DISABLE_REGISTRATION = os.getenv('DISABLE_REGISTRATION', '').lower() in ('1', 'true', 'yes')
 DB_PATH = os.getenv('AEGIS_DB_PATH', os.path.join(SCRIPT_DIR, 'aegis.db'))
 UPLOAD_DIR = os.getenv('AEGIS_UPLOAD_DIR', os.path.join(SCRIPT_DIR, 'uploads'))
 
@@ -390,6 +392,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         if self.path == '/api/register':
+            if DISABLE_REGISTRATION:
+                self.send_error_response(403, "Registration is disabled on this instance.")
+                return
             payload = self._read_json_payload(max_length=5120) # 5KB
             if not payload:
                 return
@@ -507,34 +512,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             conn.close()
 
         elif self.path == '/api/shared-route':
-            payload = self._read_json_payload()
-            if not payload:
-                return
-                
-            token = payload.get('share_token')
-            route_data = payload.get('route_data')
-            
-            if not token or not route_data:
-                self.send_error_response(400, "Missing data")
-                return
-                
-            try:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                
-                c.execute("SELECT id FROM routes WHERE share_token=?", (token,))
-                if not c.fetchone():
-                    conn.close()
-                    self.send_error_response(404, "Route not found")
-                    return
-                    
-                c.execute("UPDATE routes SET route_data=? WHERE share_token=?", 
-                         (json.dumps(route_data), token))
-                conn.commit()
-                conn.close()
-                self.send_success_response({"message": "Shared route updated"})
-            except Exception as e:
-                self.send_error_response(500, str(e))
+            # Shared links are read-only; updates require an authenticated owner via /api/save-route
+            self.send_error_response(403, "Shared routes are read-only. Sign in to save your own copy.")
+            return
 
         elif self.path == '/api/route-sync':
             payload = self._read_json_payload(max_length=1048576) # 1MB limit
@@ -568,6 +548,19 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error_response(500, str(e))
                 
         elif self.path == '/api/upload':
+            token = self.headers.get('Authorization', '').replace('Bearer ', '').strip()
+            if not token:
+                self.send_error_response(401, "Unauthorized")
+                return
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("SELECT id FROM users WHERE token=?", (token,))
+            if not c.fetchone():
+                conn.close()
+                self.send_error_response(401, "Invalid token")
+                return
+            conn.close()
+
             try:
                 # Read raw body
                 content_length = int(self.headers.get('Content-Length', 0))
@@ -636,7 +629,7 @@ if __name__ == '__main__':
     
     for i in range(max_tries):
         try:
-            server_address = ('0.0.0.0', port)
+            server_address = (LISTEN_HOST, port)
             httpd = ThreadPoolTCPServer(server_address, CustomHandler)
             break
         except OSError as e:
@@ -651,7 +644,7 @@ if __name__ == '__main__':
         sys.exit(1)
         
     print(f"❤️ AegisRoute Server is active (Secured!)")
-    print(f"🌍 Local: http://localhost:{port}")
+    print(f"🌍 Listening on http://{LISTEN_HOST}:{port}")
     print("Press Ctrl+C to stop.")
     try:
         httpd.serve_forever()

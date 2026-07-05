@@ -80,6 +80,18 @@ Edit stops and legs in the UI, or modify `src/route.json` directly. Environment 
 |----------|---------|-------------|
 | `AEGIS_DB_PATH` | `src/aegis.db` | SQLite database path |
 | `AEGIS_UPLOAD_DIR` | `src/uploads` | Uploaded image directory |
+| `LISTEN_HOST` | `127.0.0.1` | Bind address (`0.0.0.0` only inside Docker) |
+| `AEGIS_PORT` | `8080` | Starting port (auto-increments if busy) |
+| `DISABLE_REGISTRATION` | — | Set `true` to disable open registration |
+
+---
+
+## Security Notes
+
+- **Localhost by default** — `server.py` binds to `127.0.0.1`, not your entire network
+- **Docker** — Compose maps `127.0.0.1:8888:8080` so the app is not reachable from LAN
+- **Shared links** — Read-only; saving edits requires login
+- **Production** — Set `DISABLE_REGISTRATION=true` if exposing via reverse proxy
 
 ---
 

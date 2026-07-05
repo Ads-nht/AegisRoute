@@ -1,18 +1,18 @@
-# 🗺️ Nazen Rota - Yol Haritası (Roadmap)
+# AegisRoute — Roadmap
 
-Gelecekte projeye eklenebilecek olası özellikler ve geliştirme aşamaları aşağıda planlanmıştır:
+## Phase 1: Core (Done)
+- [x] Timeline UI and budget calculator
+- [x] Leaflet.js map with layered polylines
+- [x] Offline fallback and auto port scan
+- [x] Mobile-responsive layout
+- [x] User accounts and route sharing
 
-## Faz 1: Temel Entegrasyon ve Kararlılık (Tamamlandı)
-- [x] Zaman çizelgesi arayüzü ve bütçe hesaplayıcı.
-- [x] Leaflet.js entegrasyonu ve rota çizgilerinin çizilmesi.
-- [x] Poka-Yoke çevrimdışı fallback ve otomatik port bulma sistemi.
-- [x] Mobil ekran optimizasyonları ve kaydırma hareketleri.
+## Phase 2: Enrichment
+- [ ] Weather widget per stop
+- [ ] Stop photo attachments (authenticated upload)
+- [ ] Live transit schedule integration
 
-## Faz 2: Canlı Veri ve Zenginleştirme
-- [ ] **Canlı Hava Durumu Entegrasyonu:** Karaköy ve Üsküdar için anlık hava durumu uyarısı (Örn: yağmur yağacaksa "Şemsiyeni almayı unutma! 🌧️" mesajı).
-- [ ] **Yerel Fotoğraflar:** Duraklara tıklandığında popup içerisinde o yerin (örneğin Kamondo Merdivenleri veya Kız Kulesi) estetik fotoğraflarının gösterilmesi.
-- [ ] **Gelişmiş Harita Detayları:** Vapur saatleri ve Marmaray/Metro duraklarının aktarma saatlerinin canlı çekilmesi.
-
-## Faz 3: Dinamik Rota ve Özelleştirme
-- [ ] **Yedek Rota Planı:** Yağmur veya ani plan değişikliklerinde tek tıkla "Kapalı Mekan Alternatif Rotası"na geçiş yapabilme düğmesi.
-- [ ] **PWA (Progressive Web App):** Uygulamayı telefona ikon olarak ekleyip tamamen çevrimdışı (offline-first) çalışabilmesini sağlamak.
+## Phase 3: Offline & PWA
+- [ ] Progressive Web App (install to home screen)
+- [ ] Offline-first route caching
+- [ ] One-click alternate indoor route template

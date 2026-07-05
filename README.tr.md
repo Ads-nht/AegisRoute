@@ -80,6 +80,18 @@ Durakları arayüzden veya doğrudan `src/route.json` dosyasından düzenleyin. 
 |----------|------------|----------|
 | `AEGIS_DB_PATH` | `src/aegis.db` | SQLite veritabanı yolu |
 | `AEGIS_UPLOAD_DIR` | `src/uploads` | Yüklenen görseller dizini |
+| `LISTEN_HOST` | `127.0.0.1` | Dinleme adresi (Docker içinde `0.0.0.0`) |
+| `AEGIS_PORT` | `8080` | Başlangıç portu (doluysa otomatik artar) |
+| `DISABLE_REGISTRATION` | — | `true` ise açık kayıt kapalı |
+
+---
+
+## Güvenlik Notları
+
+- **Varsayılan localhost** — `server.py` tüm ağa değil, `127.0.0.1`'e bağlanır
+- **Docker** — Compose `127.0.0.1:8888:8080` kullanır; LAN'dan erişilemez
+- **Paylaşım linkleri** — Salt okunur; düzenleme kaydı için giriş gerekir
+- **Üretim** — Reverse proxy arkasında `DISABLE_REGISTRATION=true` ayarlayın
 
 ---
 
